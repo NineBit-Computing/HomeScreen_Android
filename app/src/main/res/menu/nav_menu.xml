@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--Navigation Menu Icons Desigining-->
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/lock"
+        android:enabled="true"
+        android:icon="@drawable/baseline_lock_person_24"
+        />
+    <item
+        android:id="@+id/group"
+        android:enabled="true"
+        android:icon="@drawable/baseline_groups_24" />
+    <item
+        android:id="@+id/favourite"
+        android:enabled="true"
+        android:icon="@drawable/baseline_favorite_24" />
+    <item
+        android:id="@+id/cloud"
+        android:enabled="true"
+        android:icon="@drawable/baseline_cloud_upload_24"/>
+</menu>
