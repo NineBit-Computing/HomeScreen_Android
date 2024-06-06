@@ -130,15 +130,19 @@ public class FileUploadScreen extends AppCompatActivity {
     }
 
     private void cancelUpload() {
-        // Logic to cancel the upload
         previewSection.setVisibility(View.GONE);
         uploadFileSection.setVisibility(View.VISIBLE);
         uploadProgressSection.setVisibility(View.VISIBLE);
     }
 
     private void setProgressValue(final int progress) {
-        uploadProgress.setProgress(progress);
-//        uploadProgressPercentage.setText(progress + "%");
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                uploadProgress.setProgress(progress);
+                uploadProgressPercentage.setText(progress + "%");
+            }
+        });
 
         // thread is used to change the progress value
         Thread thread = new Thread(new Runnable() {
@@ -146,14 +150,17 @@ public class FileUploadScreen extends AppCompatActivity {
             public void run() {
                 try {
                     Thread.sleep(1000);
+                    if (progress < 100) {
+                        setProgressValue(progress + 10);
+                    }
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                setProgressValue(progress + 10);
             }
         });
         thread.start();
     }
+
 
     private String getPathFromUri(Context context, Uri uri) {
         String filePath = null;
