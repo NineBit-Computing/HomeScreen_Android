@@ -274,6 +274,4 @@ public class FileUploadScreen extends AppCompatActivity {
             }
         });
     }
-
-
 }
