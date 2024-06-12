@@ -69,8 +69,10 @@ public class FileUploadScreen extends AppCompatActivity {
 
     private void showFileChooser() {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-        intent.setType("*/*");
+        intent.setType("image/*");
+        intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"image/jpeg", "image/png"}); // Specify allowed MIME types
         startActivityForResult(Intent.createChooser(intent, "Select a file"), FILE_SELECT_CODE);
+
     }
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
@@ -144,7 +146,7 @@ public class FileUploadScreen extends AppCompatActivity {
         String filePath = null;
         try (InputStream inputStream = context.getContentResolver().openInputStream(uri)) {
             if (inputStream != null) {
-                File tempFile = File.createTempFile("temp_image", null, context.getCacheDir());
+                File tempFile = File.createTempFile("temp_image", ".jpg", context.getCacheDir()); //Updated getPathFromUri method to create a temporary file with a .jpg extension.
                 try (OutputStream outputStream = new FileOutputStream(tempFile)) {
                     byte[] buffer = new byte[1024];
                     int read;
@@ -277,7 +279,7 @@ public class FileUploadScreen extends AppCompatActivity {
                         JSONObject jsonResponse = new JSONObject(responseBody);
                         JSONObject message = jsonResponse.getJSONObject("message");
                         JSONObject body = new JSONObject(message.getString("body"));
-                        JSONObject dRes = body.getJSONObject("dRes");
+                        JSONObject dRes = body.getJSONObject("d_res");
                         String emotion = dRes.getString("emotion");
 
                         Log.i("Emotion", emotion);
