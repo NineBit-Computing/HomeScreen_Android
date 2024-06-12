@@ -1,4 +1,5 @@
 package com.example.homescreen;
+
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -6,6 +7,7 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -13,25 +15,22 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import org.json.JSONException;
+import org.json.JSONObject;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-
 import okhttp3.MediaType;
+import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
-import android.view.View;
-
-import org.json.JSONException;
-import org.json.JSONObject;
-
+import okhttp3.logging.HttpLoggingInterceptor;
 public class FileUploadScreen extends AppCompatActivity {
     private static final int FILE_SELECT_CODE = 0;
-    int progress = 0;
     private ProgressBar uploadProgress;
     private TextView uploadStatus;
     private LinearLayout uploadFileSection;
@@ -40,11 +39,7 @@ public class FileUploadScreen extends AppCompatActivity {
     private ImageView previewImage;
     private TextView uploadProgressPercentage;
     private TextView ml_response_text;
-
-
-    // File URI
     private Uri fileUri;
-    private String fileName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,7 +49,6 @@ public class FileUploadScreen extends AppCompatActivity {
         uploadFileSection = findViewById(R.id.uploadFileSection);
         previewSection = findViewById(R.id.previewSection);
         uploadProgressSection = findViewById(R.id.uploadProgressSection);
-
         TextView uploadTitle = findViewById(R.id.upload_title);
         ImageView uploadIcon = findViewById(R.id.upload_icon);
         TextView uploadHint = findViewById(R.id.upload_hint);
@@ -64,26 +58,20 @@ public class FileUploadScreen extends AppCompatActivity {
         uploadStatus = findViewById(R.id.upload_status);
         previewImage = findViewById(R.id.previewImage);
         ml_response_text = findViewById(R.id.ml_response_text);
-
-
-
         chooseFileButton.setOnClickListener(v -> showFileChooser());
-
         Button uploadButton = findViewById(R.id.fileUploadBtn);
         Button cancelButton = findViewById(R.id.cancelBtn);
-
         uploadButton.setOnClickListener(v -> startUpload());
         cancelButton.setOnClickListener(v -> cancelUpload());
 
-        setProgressValue(progress);
+        setProgressValue(0);
     }
 
     private void showFileChooser() {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-        intent.setType("*/*"); // Change this if you want to allow other types of files
+        intent.setType("*/*");
         startActivityForResult(Intent.createChooser(intent, "Select a file"), FILE_SELECT_CODE);
     }
-
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -94,7 +82,6 @@ public class FileUploadScreen extends AppCompatActivity {
             }
         }
     }
-
     private void handleFilePreview(Uri uri) {
         try (InputStream inputStream = getContentResolver().openInputStream(uri)) {
             if (inputStream != null) {
@@ -102,28 +89,47 @@ public class FileUploadScreen extends AppCompatActivity {
                 previewImage.setImageBitmap(bitmap);
                 previewSection.setVisibility(View.VISIBLE);
                 uploadFileSection.setVisibility(View.GONE);
-                uploadProgressSection.setVisibility(View.GONE);  // Hide the upload progress section
+                uploadProgressSection.setVisibility(View.GONE);
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
+    private void cancelUpload() {
+        previewSection.setVisibility(View.GONE);
+        uploadFileSection.setVisibility(View.VISIBLE);
+        uploadProgressSection.setVisibility(View.GONE);
+    }
+
+    private void setProgressValue(final int progress) {
+        runOnUiThread(() -> {
+            uploadProgress.setProgress(progress);
+            uploadProgressPercentage.setText(progress + "%");
+        });
+
+        new Thread(() -> {
+            try {
+                Thread.sleep(1000);
+                if (progress < 100) {
+                    setProgressValue(progress + 10);
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
+    // Uploading the file function (Which includes getting File Path and using that file path to Generate Signed URL)
     private void startUpload() {
         if (fileUri != null) {
             String filePath = getPathFromUri(this, fileUri);
             if (filePath != null && !filePath.isEmpty()) {
                 File file = new File(filePath);
                 if (file.exists()) {
-                    try {
-                        // Use your API endpoint for uploading
-                      String signedUrl = "https://ninebit.s3.ap-south-1.amazonaws.com/312.jpg?Content-Type=image%2Fjpeg&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIA3D7KSU77T7IBVQ5N%2F20240611%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20240611T101204Z&X-Amz-Expires=600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEML%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCmFwLXNvdXRoLTEiRzBFAiAwfgVxEfAp16HX%2Fd5JHyZ0Ujo6xiY5q6qEv8c4E4iO%2FwIhAIdj9IZUdA%2FZzraY1rrRVLAwsVjXiSvBYgyX%2B2S2nkKyKpIDCFsQAxoMNzY0NDU5MjYzOTk5IgxfLLBKFOH4frYNr7Eq7wIQlk82WY85w1FNcHhDZT9zn7hRVN94aToMQisMWeRFwXYthJQqxGKCLJbWXTQAOqeR6kcCA3TRpSKrCIdIt6qBqFyEy9pmxa2Jl2q0s2T7dGwEvOlc2F7VjjPdh0q5yL7tUHe4tsDOp4RBkb6%2FU%2BN0sip%2Ff2gDg%2BAIFnajRMIVGi2wKuctSTi2y9bk%2BV%2FWmNxSnc76IANv5UBwQbcgIcJuvHY3NbicSyWqKQJv6eFqZqF5FF4%2BOfrM9RiRYdw%2Fb64ugjR9jYeJJwXyYfpBvaQdJIBu4aH78kEp0iSTd1p50aHPRLvFTjhiwN%2FJ10n6vGSo2RF35nBtadJfe27vPRBUO0xLkibvHshezstIO8ddNvJQufZ7QTYSnZOV%2FGv8fIDtUkBQmvR6dAkSuVJaITWGiFOZ9SwFgl6opqqjORxd7vgEszx5Fl68%2FJMlt%2FNhM1GqLFPe92bsn9D1zwEWuwlg%2FhQixZnhqOmCzYjMednSMPTFoLMGOp0BvPzyrYOkl%2BQWztju6nBo%2F287Ssr86ilFo%2B7P9cIi4ESOrc8MO6kdfZmNOdk%2B8IddKBGhDExCSBo%2F67q3naDY90EfMh7%2FTogOd3UqKrsjdO596gteAVTShQqzIA4pApTA7be7894DboHCmyiugclG61XDtMocIxAb2aIMDQ19faO0x3LbWbFR0d31sd9uVbhLpUuXiKs1qk6a24o17A%3D%3D&X-Amz-Signature=54d29e8a4fc6fa5b7bd65f5c77f7fb3cf08352ae7c18c94dec3ebf4433d26760&X-Amz-SignedHeaders=host";
-                        uploadToS3(file, signedUrl);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+                    generateSignedUrl(file);
                 } else {
-                    Log.e("FileUpload", "File not found: " + filePath   );
+                    Log.e("FileUpload", "File not found: " + filePath);
                 }
             } else {
                 Log.e("FileUpload", "Failed to retrieve file path from URI: " + fileUri);
@@ -131,59 +137,22 @@ public class FileUploadScreen extends AppCompatActivity {
         } else {
             Log.e("FileUpload", "No file selected");
         }
-
-//        previewSection.setVisibility(View.GONE);
-//        uploadProgressSection.setVisibility(View.VISIBLE);
     }
 
-    private void cancelUpload() {
-        previewSection.setVisibility(View.GONE);
-        uploadFileSection.setVisibility(View.VISIBLE);
-        uploadProgressSection.setVisibility(View.VISIBLE);
-    }
-
-    private void setProgressValue(final int progress) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                uploadProgress.setProgress(progress);
-                uploadProgressPercentage.setText(progress + "%");
-            }
-        });
-
-        // thread is used to change the progress value
-        Thread thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Thread.sleep(1000);
-                    if (progress < 100) {
-                        setProgressValue(progress + 10);
-                    }
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-        thread.start();
-    }
-
-
+    //Getting the path of the Image File
     private String getPathFromUri(Context context, Uri uri) {
         String filePath = null;
-        try {
-            InputStream inputStream = context.getContentResolver().openInputStream(uri);
+        try (InputStream inputStream = context.getContentResolver().openInputStream(uri)) {
             if (inputStream != null) {
                 File tempFile = File.createTempFile("temp_image", null, context.getCacheDir());
-                OutputStream outputStream = new FileOutputStream(tempFile);
-                byte[] buffer = new byte[1024];
-                int read;
-                while ((read = inputStream.read(buffer)) != -1) {
-                    outputStream.write(buffer, 0, read);
+                try (OutputStream outputStream = new FileOutputStream(tempFile)) {
+                    byte[] buffer = new byte[1024];
+                    int read;
+                    while ((read = inputStream.read(buffer)) != -1) {
+                        outputStream.write(buffer, 0, read);
+                    }
+                    filePath = tempFile.getAbsolutePath();
                 }
-                filePath = tempFile.getAbsolutePath();
-                inputStream.close();
-                outputStream.close();
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -191,43 +160,100 @@ public class FileUploadScreen extends AppCompatActivity {
         return filePath;
     }
 
-    private void uploadToS3(File file, String signedUrl) throws IOException {
+
+    //After Getting the path generating signed URL by calling method generateSignedUrl
+    private void generateSignedUrl(File file) {
+        HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
+        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
+        OkHttpClient client = new OkHttpClient.Builder()
+                .addInterceptor(loggingInterceptor)
+                .build();
+
+        String fileName = file.getName();
+        String url = "https://apis-dev.ninebit.in/presigned/putObject/" + fileName;
+
+        RequestBody requestBody = new MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("file", fileName, RequestBody.create(file, MediaType.parse("application/octet-stream")))
+                .build();
+
+        Request request = new Request.Builder()
+                .url(url)
+                .post(requestBody)
+                .build();
+
+        client.newCall(request).enqueue(new okhttp3.Callback() {
+            @Override
+            public void onFailure(okhttp3.Call call, IOException e) {
+                Log.e("GenerateSignedUrl", "ERROR: Failed to make request", e);
+                runOnUiThread(() -> uploadStatus.setText("Failed to generate signed URL"));
+            }
+            @Override
+            public void onResponse(okhttp3.Call call, Response response) throws IOException {
+                if (response.isSuccessful()) {
+                    String responseBody = response.body().string();
+                    Log.d("GenerateSignedUrl", "Response body: " + responseBody);
+                    try {
+                        JSONObject jsonObject = new JSONObject(responseBody);
+                        String message = jsonObject.getString("message");   // Retrieving the URL from the "message" key
+                        uploadToS3(file, message);                                // Passing the URL to the next step
+                    } catch (JSONException e) {
+                        Log.e("GenerateSignedUrl", "ERROR: Failed to parse JSON response", e);
+                        runOnUiThread(() -> uploadStatus.setText("Failed to parse signed URL response"));
+                    }
+                } else {
+                    String responseBody = response.body().string();
+                    Log.e("GenerateSignedUrl", "ERROR: " + response.code() + " " + response.message() + " " + responseBody);
+                    runOnUiThread(() -> uploadStatus.setText("Failed to generate signed URL"));
+                }
+            }
+
+        });
+    }
+
+
+    //After generating Signed URL it will be uploaded to the server
+    private void uploadToS3(File file, String signedUrl) {
         OkHttpClient client = new OkHttpClient();
 
-        MediaType mediaType = MediaType.parse("image/jpeg");
-        RequestBody requestBody = RequestBody.create(file, mediaType);
+        String mediaType = getContentResolver().getType(fileUri);
+        RequestBody requestBody = RequestBody.create(file, MediaType.parse(mediaType));
 
         Request request = new Request.Builder()
                 .url(signedUrl)
                 .put(requestBody)
-                .addHeader("Content-Type", "image/jpeg")
+                .addHeader("Content-Type", mediaType)
                 .build();
 
         client.newCall(request).enqueue(new okhttp3.Callback() {
             @Override
             public void onFailure(okhttp3.Call call, IOException e) {
                 Log.e("Upload", "ERROR", e);
+                runOnUiThread(() -> uploadStatus.setText("Upload Failed"));
             }
 
             @Override
             public void onResponse(okhttp3.Call call, Response response) throws IOException {
                 if (response.isSuccessful()) {
                     Log.i("Upload", "SUCCESS");
-                    runOnUiThread(()-> uploadStatus.setText("Upload Successful"));
-                    getMLresponse(fileName);
+                    runOnUiThread(() -> uploadStatus.setText("Upload Successful"));
+                    getMLresponse(file.getName());
                 } else {
                     Log.e("Upload", "ERROR: " + response.message());
-                    runOnUiThread(()-> uploadStatus.setText("Upload Failed"));
+                    runOnUiThread(() -> uploadStatus.setText("Upload Failed"));
                 }
             }
         });
     }
 
+
+    //After Uploading it will give the ML response and display on View through API call
     private void getMLresponse(String fileName) {
         OkHttpClient client = new OkHttpClient();
         String url = "https://apis-dev.ninebit.in/py/v1/classify-image";
+
         String json = " {\n" +
-                "    \"object\" : \"312.jpg\",\n" +
+                "    \"object\" : \"" + fileName + "\",\n" +
                 "    \"model\": \"model1.h5\"\n" +
                 "} ";
         RequestBody requestBody = RequestBody.create(json, MediaType.parse("application/json"));
@@ -251,11 +277,7 @@ public class FileUploadScreen extends AppCompatActivity {
                         JSONObject jsonResponse = new JSONObject(responseBody);
                         JSONObject message = jsonResponse.getJSONObject("message");
                         JSONObject body = new JSONObject(message.getString("body"));
-
-                        // Getting the "dRes" object
                         JSONObject dRes = body.getJSONObject("dRes");
-
-                        // Getting the "emotion" value
                         String emotion = dRes.getString("emotion");
 
                         Log.i("Emotion", emotion);
