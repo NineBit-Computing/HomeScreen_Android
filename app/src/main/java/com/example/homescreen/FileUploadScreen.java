@@ -247,14 +247,14 @@ public class FileUploadScreen extends AppCompatActivity {
         client.newCall(request).enqueue(new okhttp3.Callback() {
             @Override
             public void onFailure(okhttp3.Call call, IOException e) {
-                Log.e("Upload", "ERROR", e);
+                Log.e("Upload", "Error Occurred While Uploading", e);
                 runOnUiThread(() -> uploadStatus.setText("Upload Failed"));
             }
 
             @Override
             public void onResponse(okhttp3.Call call, Response response) throws IOException {
                 if (response.isSuccessful()) {
-                    Log.i("Upload", "SUCCESS");
+                    Log.i("Upload", "Succesfully Uploaded");
                     runOnUiThread(() -> uploadStatus.setText("Upload Successful"));
                     getMLresponse(file.getName());
                 } else {
@@ -284,7 +284,7 @@ public class FileUploadScreen extends AppCompatActivity {
         client.newCall(request).enqueue(new okhttp3.Callback() {
             @Override
             public void onFailure(okhttp3.Call call, IOException e) {
-                Log.e("ML Response", "ERROR", e);
+                Log.e("ML Response", "Error While Fetching the Response", e);
                 runOnUiThread(() -> uploadStatus.setText("ML Response Failed"));
             }
 
