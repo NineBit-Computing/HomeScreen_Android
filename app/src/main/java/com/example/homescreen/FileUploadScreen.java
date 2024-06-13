@@ -29,6 +29,7 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.logging.HttpLoggingInterceptor;
+import android.webkit.MimeTypeMap;
 public class FileUploadScreen extends AppCompatActivity {
     private static final int FILE_SELECT_CODE = 0;
     private ProgressBar uploadProgress;
@@ -146,7 +147,14 @@ public class FileUploadScreen extends AppCompatActivity {
         String filePath = null;
         try (InputStream inputStream = context.getContentResolver().openInputStream(uri)) {
             if (inputStream != null) {
-                File tempFile = File.createTempFile("temp_image", ".jpg", context.getCacheDir()); //Updated getPathFromUri method to create a temporary file with a .jpg extension.
+                String fileExtension = getFileExtension(context, uri);              // Determining the file extension dynamically
+                if (fileExtension == null  || fileExtension.isEmpty()){
+                    fileExtension="";                                              // If the MIME Type is not recognised do not set any extension
+                }
+                else {
+                    fileExtension= "." + fileExtension;
+                }
+                File tempFile = File.createTempFile("temp_image", fileExtension, context.getCacheDir());   //Create a temporary file with the appropriate extension
                 try (OutputStream outputStream = new FileOutputStream(tempFile)) {
                     byte[] buffer = new byte[1024];
                     int read;
@@ -161,9 +169,18 @@ public class FileUploadScreen extends AppCompatActivity {
         }
         return filePath;
     }
+    //Helper method to get the file extension from the URI
+    private  String getFileExtension(Context context, Uri uri){
+        String extension = null;
+        String mimeType = context.getContentResolver().getType(uri);
+        if (mimeType!= null){
+            extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType);
+        }
+        return extension;
+    }
 
 
-    //After Getting the path generating signed URL by calling method generateSignedUrl
+    //After Getting the path generating signed URL by calling method generateSignedUrl (post)
     private void generateSignedUrl(File file) {
         HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
         loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
@@ -214,7 +231,7 @@ public class FileUploadScreen extends AppCompatActivity {
     }
 
 
-    //After generating Signed URL it will be uploaded to the server
+    //After generating Signed URL it will be uploaded to the server (put)
     private void uploadToS3(File file, String signedUrl) {
         OkHttpClient client = new OkHttpClient();
 
@@ -223,7 +240,7 @@ public class FileUploadScreen extends AppCompatActivity {
 
         Request request = new Request.Builder()
                 .url(signedUrl)
-                .put(requestBody)
+                .put(requestBody) //put
                 .addHeader("Content-Type", mediaType)
                 .build();
 
