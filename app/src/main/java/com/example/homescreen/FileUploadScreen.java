@@ -155,6 +155,10 @@ public class FileUploadScreen extends AppCompatActivity {
         previewSection.setVisibility(View.GONE);
         uploadFileSection.setVisibility(View.VISIBLE);
         uploadProgressSection.setVisibility(View.GONE);
+        //        Response reset
+        ml_response_text.setText("");
+        ml_response_text.setVisibility(View.GONE);
+        uploadStatus.setText("");
     }
 
 

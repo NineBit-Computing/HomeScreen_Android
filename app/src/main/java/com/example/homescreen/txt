@@ -27,11 +27,9 @@ public class MainActivity extends AppCompatActivity implements TermsAndCondition
         setContentView(R.layout.activity_main_);
 
         // Show the terms and conditions dialog when the app launches
-        if (savedInstanceState == null) {
-            TermsAndConditionsDialogFragment dialogFragment = new TermsAndConditionsDialogFragment();
-            dialogFragment.setCancelable(false); // Make the dialog non-cancelable
-            dialogFragment.show(getSupportFragmentManager(), "TermsAndConditionsDialog");
-        }
+        TermsAndConditionsDialogFragment dialogFragment = new TermsAndConditionsDialogFragment();
+        dialogFragment.setCancelable(false); // Make the dialog non-cancelable
+        dialogFragment.show(getSupportFragmentManager(), "TermsAndConditionsDialog");
 
         if (savedInstanceState != null) {
             dataArrayList = (ArrayList<ListData>) savedInstanceState.getSerializable(DATA_ARRAY_LIST_KEY);
@@ -93,6 +91,5 @@ public class MainActivity extends AppCompatActivity implements TermsAndCondition
     @Override
     public void onTermsAccepted() {
         // Terms accepted, continue with main activity
-        Toast.makeText(this, "Terms Accepted", Toast.LENGTH_SHORT).show();
     }
 }
