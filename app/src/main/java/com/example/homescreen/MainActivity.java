@@ -11,7 +11,6 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
-
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity implements TermsAndConditionsDialogFragment.TermsAndConditionsListener {
@@ -26,7 +25,7 @@ public class MainActivity extends AppCompatActivity implements TermsAndCondition
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main_);
 
-        // Show the terms and conditions dialog when the app launches
+        // Showing the terms and conditions dialog(pop-up) when the app launches
         if (savedInstanceState == null) {
             TermsAndConditionsDialogFragment dialogFragment = new TermsAndConditionsDialogFragment();
             dialogFragment.setCancelable(false); // Make the dialog non-cancelable
