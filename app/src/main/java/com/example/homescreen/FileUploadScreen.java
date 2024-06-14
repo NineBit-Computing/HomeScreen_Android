@@ -1,6 +1,7 @@
 package com.example.homescreen;
 
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -9,11 +10,13 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.webkit.MimeTypeMap;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import org.json.JSONException;
@@ -30,8 +33,6 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.logging.HttpLoggingInterceptor;
-import android.webkit.MimeTypeMap;
-import android.widget.Toast;
 
 public class FileUploadScreen extends AppCompatActivity {
     private static final int FILE_SELECT_CODE = 0;
@@ -44,7 +45,7 @@ public class FileUploadScreen extends AppCompatActivity {
     private TextView uploadProgressPercentage;
     private TextView ml_response_text;
     private Uri fileUri;
-
+    private ImageView backButton;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -67,6 +68,8 @@ public class FileUploadScreen extends AppCompatActivity {
         uploadStatus = findViewById(R.id.upload_status);
         previewImage = findViewById(R.id.previewImage);
         ml_response_text = findViewById(R.id.ml_response_text);
+        backButton = findViewById(R.id.back_button);
+
     }
     private void setButtonListeners() {
         Button chooseFileButton = findViewById(R.id.outlinedButton);
@@ -76,12 +79,14 @@ public class FileUploadScreen extends AppCompatActivity {
         uploadButton.setOnClickListener(v -> startUpload());
 
         Button cancelButton = findViewById(R.id.cancelBtn);
-        cancelButton.setOnClickListener(v -> cancelUpload());
+        cancelButton.setOnClickListener(v -> showCancelConfirmationDialog());
+
+        backButton.setOnClickListener(v -> navigateBackToFileSelection());
 
     }
 
-
-    private void showFileChooser() {                                                                //Method to Select the image file to be uploaded(in jpeg or in png)
+    //Method to Select the image file to be uploaded(in jpeg or in png)
+    private void showFileChooser() {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.setType("image/*");
         intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"image/jpeg", "image/png"});          // Specify allowed MIME types
@@ -90,7 +95,7 @@ public class FileUploadScreen extends AppCompatActivity {
     }
     @SuppressLint("SetTextI18n")
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {   //Handles the result from the file chooser
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {       //Handles the result from the file chooser
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == FILE_SELECT_CODE && resultCode == RESULT_OK && data != null) {
             fileUri = data.getData();
@@ -106,8 +111,10 @@ public class FileUploadScreen extends AppCompatActivity {
         }
     }
 
+
+    //Method to Preview The selected image file , opens an input stream to read the selected file , decodes it into bitmap and displays in image view
     @SuppressLint("SetTextI18n")
-    private void handleFilePreview(Uri uri) {  //Method to Preview The selected image file , opens an input stream to read the selected file , decodes it into bitmap and displays in image view
+    private void handleFilePreview(Uri uri) {
         try (InputStream inputStream = getContentResolver().openInputStream(uri)) {
             if (inputStream != null) {
                 Toast.makeText(getApplicationContext(), "Preview Successful", Toast.LENGTH_SHORT).show();
@@ -126,14 +133,34 @@ public class FileUploadScreen extends AppCompatActivity {
         }
     }
 
+
+//    Methods for Navigation Back button, Show Cancel Confirmation, Cancel Upload
+    private void navigateBackToFileSelection() {
+        previewSection.setVisibility(View.GONE);
+        uploadFileSection.setVisibility(View.VISIBLE);
+        uploadProgressSection.setVisibility(View.GONE);
+        //        Response reset
+        ml_response_text.setText("");
+        ml_response_text.setVisibility(View.GONE);
+        uploadStatus.setText("");
+    }
+    private void showCancelConfirmationDialog() {
+        new AlertDialog.Builder(this)
+                .setMessage("Are you sure you want to cancel?")
+                .setPositiveButton("Yes", (dialog, which) -> cancelUpload())
+                .setNegativeButton("No", null)
+                .show();
+    }
     private void cancelUpload() {  // Method for Cancel the Browse Image
         previewSection.setVisibility(View.GONE);
         uploadFileSection.setVisibility(View.VISIBLE);
         uploadProgressSection.setVisibility(View.GONE);
     }
 
+
+    //Progress Bar component
     @SuppressLint("SetTextI18n")
-    private void setProgressValue(final int progress) { //Progress Bar component
+    private void setProgressValue(final int progress) {
         runOnUiThread(() -> {
             uploadProgress.setProgress(progress);
             uploadProgressPercentage.setText(progress + "%");
@@ -179,9 +206,9 @@ public class FileUploadScreen extends AppCompatActivity {
         String filePath = null;
         try (InputStream inputStream = context.getContentResolver().openInputStream(uri)) {
             if (inputStream != null) {
-                String fileExtension = getFileExtension(context, uri);              // Determining the file extension dynamically
+                String fileExtension = getFileExtension(context, uri);                              // Determining the file extension dynamically
                 if (fileExtension == null  || fileExtension.isEmpty()){
-                    fileExtension="";                                              // If the MIME Type is not recognised do not set any extension
+                    fileExtension="";                                                               // If the MIME Type is not recognised do not set any extension
                 }
                 else {
                     fileExtension= "." + fileExtension;
@@ -243,18 +270,18 @@ public class FileUploadScreen extends AppCompatActivity {
             @Override
             public void onFailure(okhttp3.Call call, IOException e) {
                 Log.e("GenerateSignedUrl", "ERROR: Failed to make request", e);
-                runOnUiThread(() -> uploadStatus.setText("Failed to generate signed URL"));
+                System.out.println("error while getting signed url: " + e.getMessage());
             }
             @SuppressLint("SetTextI18n")
             @Override
             public void onResponse(okhttp3.Call call, Response response) throws IOException {
                 if (response.isSuccessful()) {
                     String responseBody = response.body().string();
-                    Log.d("GenerateSignedUrl", "Response body: " + responseBody);
+                    System.out.println("Signed URL generated successfully: " + responseBody);
                     try {
                         JSONObject jsonObject = new JSONObject(responseBody);
-                        String message = jsonObject.getString("message");   // Retrieving the URL from the "message" key
-                        uploadToS3(file, message);                                // Passing the URL to the next step
+                        String message = jsonObject.getString("message");                     // Retrieving the URL from the "message" key
+                        uploadToS3(file, message);                                                  // Passing the URL to the next step
                     } catch (JSONException e) {
                         Log.e("GenerateSignedUrl", "ERROR: Failed to parse JSON response", e);
                         runOnUiThread(() -> uploadStatus.setText("Failed to parse signed URL response"));
@@ -270,7 +297,7 @@ public class FileUploadScreen extends AppCompatActivity {
     }
 
 
-    //4. uploadToS3() method--> After generating Signed URL it will be uploaded to the Server(put) For Checking the response generated by ML Model
+    //4. uploadToS3() method--> After generating Signed URL it will be uploaded to the Server(put). For Checking the response generated by ML Model
     private void uploadToS3(File file, String signedUrl) {
         OkHttpClient client = new OkHttpClient();
 
