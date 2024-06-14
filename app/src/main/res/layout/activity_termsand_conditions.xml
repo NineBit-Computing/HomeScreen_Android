@@ -22,7 +22,7 @@
         android:id="@+id/btnNext"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Next"
+        android:text="Accept"
         android:layout_gravity="center"
         style="@style/Widget.Material3.Button.ElevatedButton"/>
 </LinearLayout>
