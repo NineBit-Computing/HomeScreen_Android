@@ -14,7 +14,6 @@ import android.webkit.MimeTypeMap;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.Nullable;
@@ -36,40 +35,29 @@ import okhttp3.logging.HttpLoggingInterceptor;
 
 public class FileUploadScreen extends AppCompatActivity {
     private static final int FILE_SELECT_CODE = 0;
-    private ProgressBar uploadProgress;
-    private TextView uploadStatus;
     private LinearLayout uploadFileSection;
     private LinearLayout previewSection;
-    private LinearLayout uploadProgressSection;
     private ImageView previewImage;
-    private TextView uploadProgressPercentage;
     private TextView ml_response_text;
     private Uri fileUri;
+    private String filePath;
+
     private ImageView backButton;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.e( "onCreate: ", "onCreate of file upload screen" );
         super.onCreate(savedInstanceState);
         setContentView(R.layout.file_upload_screen);
         initViews();
         setButtonListeners();
-        setProgressValue(0);
     }
 
     private void initViews() {
         uploadFileSection = findViewById(R.id.uploadFileSection);
         previewSection = findViewById(R.id.previewSection);
-        uploadProgressSection = findViewById(R.id.uploadProgressSection);
-        TextView uploadTitle = findViewById(R.id.upload_title);
-        ImageView uploadIcon = findViewById(R.id.upload_icon);
-        TextView uploadHint = findViewById(R.id.upload_hint);
-        Button chooseFileButton = findViewById(R.id.outlinedButton);
-        uploadProgress = findViewById(R.id.upload_progress);
-        uploadProgressPercentage = findViewById(R.id.upload_progress_percentage);
-        uploadStatus = findViewById(R.id.upload_status);
         previewImage = findViewById(R.id.previewImage);
         ml_response_text = findViewById(R.id.ml_response_text);
         backButton = findViewById(R.id.back_button);
-
     }
     private void setButtonListeners() {
         Button chooseFileButton = findViewById(R.id.outlinedButton);
@@ -103,11 +91,11 @@ public class FileUploadScreen extends AppCompatActivity {
                 handleFilePreview(fileUri);
             } else {
                 Log.e("FileUpload", "File URI is null");
-                uploadStatus.setText("Failed to retrieve file");
+
             }
         } else {
             Log.e("FileUpload", "File selection failed or cancelled");
-            uploadStatus.setText("No file selected");
+
         }
     }
 
@@ -117,19 +105,18 @@ public class FileUploadScreen extends AppCompatActivity {
     private void handleFilePreview(Uri uri) {
         try (InputStream inputStream = getContentResolver().openInputStream(uri)) {
             if (inputStream != null) {
-                Toast.makeText(getApplicationContext(), "Preview Successful", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(), R.string.preview_success_label, Toast.LENGTH_SHORT).show();
                 Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
                 previewImage.setImageBitmap(bitmap);
                 previewSection.setVisibility(View.VISIBLE);
                 uploadFileSection.setVisibility(View.GONE);
-                uploadProgressSection.setVisibility(View.GONE);
             } else {
                 Log.e("FileUpload", "Input stream is null");
-                uploadStatus.setText("Failed to open file");
+
             }
         } catch (Exception e) {
             Log.e("FileUpload", "Error handling file preview", e);
-            uploadStatus.setText("Error handling file preview");
+
         }
     }
 
@@ -138,15 +125,12 @@ public class FileUploadScreen extends AppCompatActivity {
     private void navigateBackToFileSelection() {
         previewSection.setVisibility(View.GONE);
         uploadFileSection.setVisibility(View.VISIBLE);
-        uploadProgressSection.setVisibility(View.GONE);
-        //        Response reset
         ml_response_text.setText("");
         ml_response_text.setVisibility(View.GONE);
-        uploadStatus.setText("");
     }
     private void showCancelConfirmationDialog() {
         new AlertDialog.Builder(this)
-                .setMessage("Are you sure you want to cancel?")
+                .setMessage(R.string.dialog_box_label)
                 .setPositiveButton("Yes", (dialog, which) -> cancelUpload())
                 .setNegativeButton("No", null)
                 .show();
@@ -154,51 +138,15 @@ public class FileUploadScreen extends AppCompatActivity {
     private void cancelUpload() {  // Method for Cancel the Browse Image
         previewSection.setVisibility(View.GONE);
         uploadFileSection.setVisibility(View.VISIBLE);
-        uploadProgressSection.setVisibility(View.GONE);
-        //        Response reset
         ml_response_text.setText("");
         ml_response_text.setVisibility(View.GONE);
-        uploadStatus.setText("");
     }
-
-
-    //Progress Bar component
-    @SuppressLint("SetTextI18n")
-    private void setProgressValue(final int progress) {
-        runOnUiThread(() -> {
-            uploadProgress.setProgress(progress);
-            uploadProgressPercentage.setText(progress + "%");
-        });
-        new Thread(() -> {
-            try {
-                Thread.sleep(1000);
-                if (progress < 100) {
-                    setProgressValue(progress + 10);
-                }
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }).start();
-    }
-
 
 
     // 1. startUpload() method -> Uploading the image file (Which includes 2 Methods-> Getting the image file Path and using that image file path to Generate Signed URL)
     private void startUpload() {
         if (fileUri != null) {
-            String filePath = getPathFromUri(this, fileUri);
-            if (filePath != null && !filePath.isEmpty()) {
-                File file = new File(filePath);
-                if (file.exists()) {
-                Toast.makeText(getApplicationContext(), "File Has Been Uploaded Successfully", Toast.LENGTH_SHORT).show();
-                    generateSignedUrl(file);
-                } else {
-                    Log.e("FileUpload", "File not found: " + filePath);
-
-                }
-            } else {
-                Log.e("FileUpload", "Failed to retrieve file path from URI: " + fileUri);
-            }
+             getPathFromUri(this, fileUri, this::generateSignedUrl);
         } else {
             Log.e("FileUpload", "No file selected");
         }
@@ -206,36 +154,37 @@ public class FileUploadScreen extends AppCompatActivity {
 
     //2. getPathFromUri() method --> Getting the path of the Image File
     @SuppressLint("SetTextI18n")
-    private String getPathFromUri(Context context, Uri uri) {
-        String filePath = null;
-        try (InputStream inputStream = context.getContentResolver().openInputStream(uri)) {
-            if (inputStream != null) {
-                String fileExtension = getFileExtension(context, uri);                              // Determining the file extension dynamically
-                if (fileExtension == null  || fileExtension.isEmpty()){
-                    fileExtension="";                                                               // If the MIME Type is not recognised do not set any extension
-                }
-                else {
-                    fileExtension= "." + fileExtension;
-                }
-                File tempFile = File.createTempFile("temp_image", fileExtension, context.getCacheDir());   //Create a temporary file with the appropriate extension
-                try (OutputStream outputStream = new FileOutputStream(tempFile)) {
-                    byte[] buffer = new byte[1024];
-                    int read;
-                    while ((read = inputStream.read(buffer)) != -1) {
-                        outputStream.write(buffer, 0, read);
+    private void getPathFromUri(Context context, Uri uri, OnPathRetrievedListener listener) {
+        new Thread(() -> {
+            String filePath = null;
+            try (InputStream inputStream = context.getContentResolver().openInputStream(uri)) {
+                if (inputStream != null) {
+                    String fileExtension = getFileExtension(context, uri);                                            // Determining the file extension dynamically
+                    if (fileExtension == null || fileExtension.isEmpty()) {
+                        fileExtension = "";                                                                          // If the MIME Type is not recognised do not set any extension
+                    } else {
+                        fileExtension = "." + fileExtension;
                     }
-                    filePath = tempFile.getAbsolutePath();
-                }catch (IOException e) {
-                    Log.e("FileUpload", "Error writing to temp file", e);
-                    uploadStatus.setText("Error writing to temp file");
+                    File tempFile = File.createTempFile("temp_image", fileExtension, context.getCacheDir());   //Create a temporary file with the appropriate extension
+                    try (OutputStream outputStream = new FileOutputStream(tempFile)) {
+                        byte[] buffer = new byte[1024];
+                        int read;
+                        while ((read = inputStream.read(buffer)) != -1) {
+                            outputStream.write(buffer, 0, read);
+                        }
+                        filePath = tempFile.getAbsolutePath();
+                    } catch (IOException e) {
+                        Log.e("FileUpload", "Error writing to temp file", e);
+                    }
+                } else {
+                    Log.e("FileUpload", "Input stream is null");
                 }
-            } else {
-                Log.e("FileUpload", "Input stream is null");
+            } catch (IOException e) {
+                Log.e("FileUpload", "Error opening input stream", e);
             }
-        } catch (IOException e) {
-            Log.e("FileUpload", "Error opening input stream", e);
-        }
-        return filePath;
+            String finalFilePath = filePath;
+            runOnUiThread(()-> listener.OnPathRetrivedListener(finalFilePath));
+        }).start();
     }
     //Helper method to get the file extension from the URI
     private  String getFileExtension(Context context, Uri uri){
@@ -249,68 +198,80 @@ public class FileUploadScreen extends AppCompatActivity {
 
 
     //3. generateSignedUrl() method--> After Getting the path generating signed URL by calling method (post)
-    private void generateSignedUrl(File file) {
-        HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
-        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
-        OkHttpClient client = new OkHttpClient.Builder()
-                .addInterceptor(loggingInterceptor)
-                .build();
+    private void generateSignedUrl(String filePath) {
+        this.filePath = filePath; // Store the file path for later use
+        if (filePath != null && !filePath.isEmpty()) {
+            File file = new File(filePath);
+            if (file.exists()) {
+                OkHttpClient client = new OkHttpClient.Builder()
+                        .addInterceptor(new HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY))
+                        .build();
 
-        String fileName = file.getName();
-        String url = "https://apis-dev.ninebit.in/presigned/putObject/" + fileName;
+                String fileName = file.getName();
+                String url = "https://apis-dev.ninebit.in/presigned/putObject/" + fileName;
 
-        RequestBody requestBody = new MultipartBody.Builder()
-                .setType(MultipartBody.FORM)
-                .addFormDataPart("file", fileName, RequestBody.create(file, MediaType.parse("application/octet-stream")))
-                .build();
+                RequestBody requestBody = new MultipartBody.Builder()
+                        .setType(MultipartBody.FORM)
+                        .addFormDataPart("file", fileName, RequestBody.create(file, MediaType.parse("application/octet-stream")))
+                        .build();
 
-        Request request = new Request.Builder()
-                .url(url)
-                .post(requestBody) //post
-                .build();
+                Request request = new Request.Builder()
+                        .url(url)
+                        .post(requestBody)
+                        .build();
 
-        client.newCall(request).enqueue(new okhttp3.Callback() {
-            @SuppressLint("SetTextI18n")
-            @Override
-            public void onFailure(okhttp3.Call call, IOException e) {
-                Log.e("GenerateSignedUrl", "ERROR: Failed to make request", e);
-                System.out.println("error while getting signed url: " + e.getMessage());
-            }
-            @SuppressLint("SetTextI18n")
-            @Override
-            public void onResponse(okhttp3.Call call, Response response) throws IOException {
-                if (response.isSuccessful()) {
-                    String responseBody = response.body().string();
-                    System.out.println("Signed URL generated successfully: " + responseBody);
-                    try {
-                        JSONObject jsonObject = new JSONObject(responseBody);
-                        String message = jsonObject.getString("message");                     // Retrieving the URL from the "message" key
-                        uploadToS3(file, message);                                                  // Passing the URL to the next step
-                    } catch (JSONException e) {
-                        Log.e("GenerateSignedUrl", "ERROR: Failed to parse JSON response", e);
-                        runOnUiThread(() -> uploadStatus.setText("Failed to parse signed URL response"));
+                client.newCall(request).enqueue(new okhttp3.Callback() {
+                    @SuppressLint("SetTextI18n")
+                    @Override
+                    public void onFailure(okhttp3.Call call, IOException e) {
+                        Log.e("GenerateSignedUrl", "ERROR: Failed to make request", e);
+                        System.out.println("Error while getting signed url: " + e.getMessage());
                     }
-                } else {
-                    String responseBody = response.body().string();
-                    Log.e("GenerateSignedUrl", "ERROR: " + response.code() + " " + response.message() + " " + responseBody);
-                    runOnUiThread(() -> uploadStatus.setText("Failed to generate signed URL"));
-                }
-            }
 
-        });
+                    @SuppressLint("SetTextI18n")
+                    @Override
+                    public void onResponse(okhttp3.Call call, Response response) throws IOException {
+                        if (response.isSuccessful()) {
+                            String responseBody = response.body().string();
+                            System.out.println("Signed URL generated successfully: " + responseBody);
+                            try {
+                                JSONObject jsonObject = new JSONObject(responseBody);
+                                String message = jsonObject.getString("message");
+                                uploadToS3(message); // Only pass the signed URL
+                            } catch (JSONException e) {
+                                Log.e("GenerateSignedUrl", "ERROR: Failed to parse JSON response", e);
+                            }
+                        } else {
+                            String responseBody = response.body().string();
+                            Log.e("GenerateSignedUrl", "ERROR: " + response.code() + " " + response.message() + " " + responseBody);
+                        }
+                    }
+                });
+            }
+        }
     }
 
-
     //4. uploadToS3() method--> After generating Signed URL it will be uploaded to the Server(put). For Checking the response generated by ML Model
-    private void uploadToS3(File file, String signedUrl) {
+    private void uploadToS3(String signedUrl) {
+        if (filePath == null) {
+            Log.e("Upload", "File path is null");
+            return;
+        }
+
+        File file = new File(filePath);
+        if (!file.exists()) {
+            Log.e("Upload", "File does not exist");
+            return;
+        }
+
         OkHttpClient client = new OkHttpClient();
 
-        String mediaType = getContentResolver().getType(fileUri);
+        String mediaType = getContentResolver().getType(fileUri); // Ensure fileUri is still accessible
         RequestBody requestBody = RequestBody.create(file, MediaType.parse(mediaType));
 
         Request request = new Request.Builder()
                 .url(signedUrl)
-                .put(requestBody) //put
+                .put(requestBody)
                 .addHeader("Content-Type", mediaType)
                 .build();
 
@@ -319,7 +280,6 @@ public class FileUploadScreen extends AppCompatActivity {
             @Override
             public void onFailure(okhttp3.Call call, IOException e) {
                 Log.e("Upload", "Error Occurred While Uploading", e);
-                runOnUiThread(() -> uploadStatus.setText("Upload Failed"));
             }
 
             @SuppressLint("SetTextI18n")
@@ -327,15 +287,14 @@ public class FileUploadScreen extends AppCompatActivity {
             public void onResponse(okhttp3.Call call, Response response) throws IOException {
                 if (response.isSuccessful()) {
                     Log.i("Upload", "Successfully Uploaded");
-                    runOnUiThread(() -> uploadStatus.setText("Upload Successful"));
                     getMLResponse(file.getName());
                 } else {
                     Log.e("Upload", "ERROR: " + response.message());
-                    runOnUiThread(() -> uploadStatus.setText("Upload Failed"));
                 }
             }
         });
     }
+
 
 
     //5. getMLResponse() method--> After Uploading it ML Model will give the response of the Image file and display on View through API call
@@ -358,7 +317,7 @@ public class FileUploadScreen extends AppCompatActivity {
             @Override
             public void onFailure(okhttp3.Call call, IOException e) {
                 Log.e("ML Response", "Error While Fetching the Response", e);
-                runOnUiThread(() -> uploadStatus.setText("ML Response Failed"));
+
             }
 
             @SuppressLint("SetTextI18n")
@@ -372,7 +331,6 @@ public class FileUploadScreen extends AppCompatActivity {
                         JSONObject body = new JSONObject(message.getString("body"));
                         JSONObject dRes = body.getJSONObject("d_res");
                         String emotion = dRes.getString("emotion");
-
                         Log.i("Emotion", emotion);
                         runOnUiThread(() -> {
                             ml_response_text.setText("Emotion: " + emotion);
@@ -380,13 +338,14 @@ public class FileUploadScreen extends AppCompatActivity {
                         });
                     } catch (JSONException e) {
                         Log.e("ML Response", "Failed to parse JSON response", e);
-                        runOnUiThread(() -> uploadStatus.setText("ML Response: Failed (JSONException)"));
                     }
                 } else {
                     Log.e("ML Response", "ERROR: " + response.message());
-                    runOnUiThread(() -> uploadStatus.setText("ML Response Failed"));
                 }
             }
         });
+    }
+    interface OnPathRetrievedListener{
+        void OnPathRetrivedListener(String filepath);
     }
 }
