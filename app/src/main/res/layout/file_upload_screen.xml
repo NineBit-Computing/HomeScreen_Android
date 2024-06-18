@@ -146,7 +146,14 @@
                     android:layout_gravity="center_horizontal"
                     android:layout_marginTop="16dp"
                     android:text="@string/previewUpload_button_label"/>
-
+                <Button
+                    android:id="@+id/runModelBtn"
+                    android:layout_width="338dp"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="16dp"
+                    android:visibility="gone"
+                    android:text="Run Model"/>
                 <Button
                     android:id="@+id/cancelBtn"
                     android:layout_width="340dp"

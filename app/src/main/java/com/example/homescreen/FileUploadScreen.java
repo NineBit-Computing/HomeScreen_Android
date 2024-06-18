@@ -58,6 +58,7 @@ public class FileUploadScreen extends AppCompatActivity {
         previewImage = findViewById(R.id.previewImage);
         ml_response_text = findViewById(R.id.ml_response_text);
         backButton = findViewById(R.id.back_button);
+
     }
     private void setButtonListeners() {
         Button chooseFileButton = findViewById(R.id.outlinedButton);
@@ -301,50 +302,80 @@ public class FileUploadScreen extends AppCompatActivity {
     private void getMLResponse(String fileName) {
         OkHttpClient client = new OkHttpClient();
         String url = "https://apis-dev.ninebit.in/py/v1/classify-image";
-
-        String json = " {\n" +
-                "    \"object\" : \"" + fileName + "\",\n" +
-                "    \"model\": \"model1.h5\"\n" +
-                "} ";
-        RequestBody requestBody = RequestBody.create(json, MediaType.parse("application/json"));
+        JSONObject jsonBody = new JSONObject();
+        try {
+            jsonBody.put("object", fileName);
+            jsonBody.put("model", "model1.h5");
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        RequestBody requestBody = RequestBody.create(jsonBody.toString(), MediaType.parse("application/json")); //Converts the jsonBody into a RequestBody object  for sending  an HTTP request.
         Request request = new Request.Builder()
                 .url(url)
-                .post(requestBody)
+                .post(requestBody) //post request
                 .build();
-
         client.newCall(request).enqueue(new okhttp3.Callback() {
-            @SuppressLint("SetTextI18n")
             @Override
             public void onFailure(okhttp3.Call call, IOException e) {
                 Log.e("ML Response", "Error While Fetching the Response", e);
-
+                runOnUiThread(() -> {
+                    ml_response_text.setText("Failed to fetch ML response");
+                    ml_response_text.setVisibility(View.VISIBLE);
+                });
             }
 
-            @SuppressLint("SetTextI18n")
             @Override
             public void onResponse(okhttp3.Call call, Response response) throws IOException {
                 if (response.isSuccessful()) {
                     String responseBody = response.body().string();
                     try {
                         JSONObject jsonResponse = new JSONObject(responseBody);
-                        JSONObject message = jsonResponse.getJSONObject("message");
-                        JSONObject body = new JSONObject(message.getString("body"));
-                        JSONObject dRes = body.getJSONObject("d_res");
-                        String emotion = dRes.getString("emotion");
-                        Log.i("Emotion", emotion);
-                        runOnUiThread(() -> {
-                            ml_response_text.setText("Emotion: " + emotion);
-                            ml_response_text.setVisibility(View.VISIBLE);
-                        });
+                        runOnUiThread(() -> showRunOutput(jsonResponse));
                     } catch (JSONException e) {
                         Log.e("ML Response", "Failed to parse JSON response", e);
+                        runOnUiThread(() -> {
+                            ml_response_text.setText("Failed to parse ML response");
+                            ml_response_text.setVisibility(View.VISIBLE);
+                        });
                     }
                 } else {
-                    Log.e("ML Response", "ERROR: " + response.message());
+                    Log.e("ML Response", "ERROR: " + response.code() + " " + response.message());
+                    runOnUiThread(() -> {
+                        ml_response_text.setText("Failed to get ML response: " + response.code());
+                        ml_response_text.setVisibility(View.VISIBLE);
+                    });
                 }
             }
         });
     }
+
+    private void showRunOutput(JSONObject data) {
+        try {
+            String responseBody = data.getJSONObject("message").getString("body");
+            String statusCode = data.getJSONObject("message").getString("statusCode");
+            String outputString;
+
+            if (!statusCode.equals("SUCCESS")) {
+                outputString = "Error: " + statusCode;
+            } else {
+                JSONObject dRes = new JSONObject(responseBody).getJSONObject("d_res");
+                String emotion = dRes.getString("emotion");
+                outputString = "Emotion: " + emotion;
+            }
+            runOnUiThread(() -> {
+                ml_response_text.setText(outputString);
+                ml_response_text.setVisibility(View.VISIBLE);
+            });
+        } catch (JSONException e) {
+            Log.e("ML Response", "Error parsing JSON", e);
+            runOnUiThread(() -> {
+                ml_response_text.setText("Failed to parse JSON response");
+                ml_response_text.setVisibility(View.VISIBLE);
+            });
+        }
+    }
+
+
     interface OnPathRetrievedListener{
         void OnPathRetrivedListener(String filepath);
     }

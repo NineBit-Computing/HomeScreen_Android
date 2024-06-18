@@ -33,7 +33,7 @@ public class TermsAndConditionsDialogFragment extends DialogFragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.activity_termsand_conditions, container, false);
 
-        Button btnNext = view.findViewById(R.id.btnNext);
+        Button btnNext = view.findViewById(R.id.BtnNxt);
         btnNext.setOnClickListener(v -> {
             listener.onTermsAccepted();
             dismiss();

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--ADDED SCROLL VIEW COMPONENT-->
+
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -86,7 +87,7 @@
         <LinearLayout
             android:id="@+id/linearLayout2"
             android:layout_width="115dp"
-            android:layout_height="92dp"
+            android:layout_height="94dp"
             android:layout_marginStart="24dp"
             android:layout_marginTop="12dp"
             android:background="#60CFDF"
@@ -97,10 +98,12 @@
             app:layout_constraintStart_toEndOf="@+id/linearLayout1"
             app:layout_constraintTop_toBottomOf="@+id/textView"
             app:layout_constraintVertical_bias="0.081">
+
             <ImageView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:src="@drawable/baseline_document_scanner_24" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -110,6 +113,7 @@
                 android:textAppearance="?attr/textAppearanceBodyMedium"
                 android:textColor="?android:attr/textColorSecondary"
                 android:textStyle="bold" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -316,8 +320,8 @@
         <!--List Items Component Layout -->
         <ListView
             android:id="@+id/listview"
-            android:layout_width="410dp"
-            android:layout_height="279dp"
+            android:layout_width="406dp"
+            android:layout_height="281dp"
             android:layout_marginTop="16dp"
             android:layout_marginBottom="125dp"
             android:divider="@android:color/transparent"
@@ -342,6 +346,7 @@
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintRight_toRightOf="parent"
             app:menu="@menu/nav_menu" />
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 </ScrollView>
