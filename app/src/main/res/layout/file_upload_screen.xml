@@ -137,7 +137,7 @@
                         android:layout_width="320dp"
                         android:layout_height="280dp"
                         android:layout_marginTop="16dp"
-                        android:scaleType="centerCrop" />
+                        android:scaleType="fitCenter" />
                 </LinearLayout>
                 <Button
                     android:id="@+id/fileUploadBtn"
@@ -146,14 +146,30 @@
                     android:layout_gravity="center_horizontal"
                     android:layout_marginTop="16dp"
                     android:text="@string/previewUpload_button_label"/>
+
+<!--                <com.google.android.material.progressindicator.CircularProgressIndicator-->
+<!--                    android:id="@+id/uploadProgressBar"-->
+<!--                    android:layout_width="wrap_content"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:layout_gravity="center_horizontal"-->
+<!--                    android:visibility="gone" />-->
+
                 <Button
                     android:id="@+id/runModelBtn"
                     android:layout_width="338dp"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_horizontal"
                     android:layout_marginTop="16dp"
-                    android:visibility="gone"
+                    android:visibility="visible"
                     android:text="Run Model"/>
+
+<!--                <com.google.android.material.progressindicator.CircularProgressIndicator-->
+<!--                    android:id="@+id/uploadProgressBar2"-->
+<!--                    android:layout_width="wrap_content"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:layout_gravity="center_horizontal"-->
+<!--                    android:visibility="gone" />-->
+
                 <Button
                     android:id="@+id/cancelBtn"
                     android:layout_width="340dp"

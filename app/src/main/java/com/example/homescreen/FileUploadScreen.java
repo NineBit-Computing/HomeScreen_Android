@@ -35,17 +35,24 @@ import okhttp3.logging.HttpLoggingInterceptor;
 
 public class FileUploadScreen extends AppCompatActivity {
     private static final int FILE_SELECT_CODE = 0;
+//    private static final long MIN_IMAGE_SIZE_BYTES = 40 * 1024;      //128 KB in bytes
+//    private static final long MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; //5 MB in bytes
+
+    //Existing Variables
     private LinearLayout uploadFileSection;
     private LinearLayout previewSection;
-    private ImageView previewImage;
-    private TextView ml_response_text;
     private Uri fileUri;
     private String filePath;
-
+    private TextView ml_response_text;
     private ImageView backButton;
+    private ImageView previewImage;
+    private Button uploadButton;
+    private Button RunModelBtn;
+    private Button chooseFileButton;
+    private Button cancelButton;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        Log.e( "onCreate: ", "onCreate of file upload screen" );
+       // Log.e( "onCreate: ", "onCreate of file upload screen" );
         super.onCreate(savedInstanceState);
         setContentView(R.layout.file_upload_screen);
         initViews();
@@ -58,20 +65,22 @@ public class FileUploadScreen extends AppCompatActivity {
         previewImage = findViewById(R.id.previewImage);
         ml_response_text = findViewById(R.id.ml_response_text);
         backButton = findViewById(R.id.back_button);
-
+        RunModelBtn = findViewById(R.id.runModelBtn);
+        uploadButton = findViewById(R.id.fileUploadBtn);
+        chooseFileButton = findViewById(R.id.outlinedButton);
+        cancelButton = findViewById(R.id.cancelBtn);
     }
     private void setButtonListeners() {
-        Button chooseFileButton = findViewById(R.id.outlinedButton);
+        // Set click listener for choose file button
         chooseFileButton.setOnClickListener(v -> showFileChooser());
-
-        Button uploadButton = findViewById(R.id.fileUploadBtn);
+        // Set click listener for upload button
         uploadButton.setOnClickListener(v -> startUpload());
-
-        Button cancelButton = findViewById(R.id.cancelBtn);
+        // Set click listener for cancel button
         cancelButton.setOnClickListener(v -> showCancelConfirmationDialog());
-
+        // Set click listener for back button
         backButton.setOnClickListener(v -> navigateBackToFileSelection());
-
+        // Set click listener for run model button
+        RunModelBtn.setOnClickListener(v -> runModel());
     }
 
     //Method to Select the image file to be uploaded(in jpeg or in png)
@@ -80,7 +89,6 @@ public class FileUploadScreen extends AppCompatActivity {
         intent.setType("image/*");
         intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"image/jpeg", "image/png"});          // Specify allowed MIME types
         startActivityForResult(Intent.createChooser(intent, "Select a file"), FILE_SELECT_CODE);
-
     }
     @SuppressLint("SetTextI18n")
     @Override
@@ -89,7 +97,12 @@ public class FileUploadScreen extends AppCompatActivity {
         if (requestCode == FILE_SELECT_CODE && resultCode == RESULT_OK && data != null) {
             fileUri = data.getData();
             if (fileUri != null) {
-                handleFilePreview(fileUri);
+               // Checking image size before previewing
+//                if (validateImageSize(fileUri)){
+                    handleFilePreview(fileUri);
+////          }else {
+//                    Toast.makeText(this, "Please select an image between 128 KB and 5 MB in size.", Toast.LENGTH_LONG).show();
+//                }
             } else {
                 Log.e("FileUpload", "File URI is null");
 
@@ -101,9 +114,26 @@ public class FileUploadScreen extends AppCompatActivity {
     }
 
 
+//    Method to validate selected image size between 128 KB and 5 MB
+//    private boolean validateImageSize(Uri uri){
+//        try (InputStream inputStream = getContentResolver().openInputStream(uri)){
+//            if (inputStream!=null){
+//                long filesize = inputStream.available();
+//                return filesize >=MIN_IMAGE_SIZE_BYTES && filesize<=MAX_IMAGE_SIZE_BYTES;
+//            } else {
+//                Log.e( "FileUpload", "Input stream is null" );
+//            }
+//        } catch (Exception e){
+//            Log.e( "FileUpload", "Error validating image size", e );
+//        }
+//        return false;
+//    }
+
     //Method to Preview The selected image file , opens an input stream to read the selected file , decodes it into bitmap and displays in image view
     @SuppressLint("SetTextI18n")
     private void handleFilePreview(Uri uri) {
+        uploadButton.setVisibility(View.VISIBLE);
+        RunModelBtn.setVisibility(View.GONE);
         try (InputStream inputStream = getContentResolver().openInputStream(uri)) {
             if (inputStream != null) {
                 Toast.makeText(getApplicationContext(), R.string.preview_success_label, Toast.LENGTH_SHORT).show();
@@ -122,13 +152,17 @@ public class FileUploadScreen extends AppCompatActivity {
     }
 
 
-//    Methods for Navigation Back button, Show Cancel Confirmation, Cancel Upload
+    // Method to navigate back to file selection
     private void navigateBackToFileSelection() {
         previewSection.setVisibility(View.GONE);
+        uploadButton.setVisibility(View.GONE);
         uploadFileSection.setVisibility(View.VISIBLE);
         ml_response_text.setText("");
         ml_response_text.setVisibility(View.GONE);
+        RunModelBtn.setVisibility(View.GONE);
     }
+
+    // Method to show cancel confirmation dialog
     private void showCancelConfirmationDialog() {
         new AlertDialog.Builder(this)
                 .setMessage(R.string.dialog_box_label)
@@ -136,11 +170,15 @@ public class FileUploadScreen extends AppCompatActivity {
                 .setNegativeButton("No", null)
                 .show();
     }
-    private void cancelUpload() {  // Method for Cancel the Browse Image
+
+    // Method to cancel upload and navigate back to file selection
+    private void cancelUpload() {
         previewSection.setVisibility(View.GONE);
         uploadFileSection.setVisibility(View.VISIBLE);
         ml_response_text.setText("");
+        uploadButton.setVisibility(View.GONE);
         ml_response_text.setVisibility(View.GONE);
+        RunModelBtn.setVisibility(View.GONE);
     }
 
 
@@ -151,7 +189,9 @@ public class FileUploadScreen extends AppCompatActivity {
         } else {
             Log.e("FileUpload", "No file selected");
         }
+//        RunModelBtn.setVisibility(View.GONE);
     }
+
 
     //2. getPathFromUri() method --> Getting the path of the Image File
     @SuppressLint("SetTextI18n")
@@ -187,6 +227,7 @@ public class FileUploadScreen extends AppCompatActivity {
             runOnUiThread(()-> listener.OnPathRetrivedListener(finalFilePath));
         }).start();
     }
+
     //Helper method to get the file extension from the URI
     private  String getFileExtension(Context context, Uri uri){
         String extension = null;
@@ -196,7 +237,6 @@ public class FileUploadScreen extends AppCompatActivity {
         }
         return extension;
     }
-
 
     //3. generateSignedUrl() method--> After Getting the path generating signed URL by calling method (post)
     private void generateSignedUrl(String filePath) {
@@ -252,7 +292,7 @@ public class FileUploadScreen extends AppCompatActivity {
         }
     }
 
-    //4. uploadToS3() method--> After generating Signed URL it will be uploaded to the Server(put). For Checking the response generated by ML Model
+    //4. uploadToS3() method--> After generating Signed URL it will be uploaded to the Server(put) for Checking the response generated by ML Model
     private void uploadToS3(String signedUrl) {
         if (filePath == null) {
             Log.e("Upload", "File path is null");
@@ -264,12 +304,9 @@ public class FileUploadScreen extends AppCompatActivity {
             Log.e("Upload", "File does not exist");
             return;
         }
-
         OkHttpClient client = new OkHttpClient();
-
-        String mediaType = getContentResolver().getType(fileUri); // Ensure fileUri is still accessible
+        String mediaType = getContentResolver().getType(fileUri); // Ensuring that fileUri is still accessible
         RequestBody requestBody = RequestBody.create(file, MediaType.parse(mediaType));
-
         Request request = new Request.Builder()
                 .url(signedUrl)
                 .put(requestBody)
@@ -288,7 +325,12 @@ public class FileUploadScreen extends AppCompatActivity {
             public void onResponse(okhttp3.Call call, Response response) throws IOException {
                 if (response.isSuccessful()) {
                     Log.i("Upload", "Successfully Uploaded");
-                    getMLResponse(file.getName());
+                    runOnUiThread(()->{
+                        ml_response_text.setVisibility(View.GONE);
+                        RunModelBtn.setVisibility(View.VISIBLE);
+                        uploadButton.setVisibility(View.GONE);
+//                        getMLResponse(file.getName());
+                    });
                 } else {
                     Log.e("Upload", "ERROR: " + response.message());
                 }
@@ -296,6 +338,15 @@ public class FileUploadScreen extends AppCompatActivity {
         });
     }
 
+//runModel() Method which execute the getMLResponse which clicking on the RunMLBtn
+    private void runModel(){
+        if(filePath!= null && !filePath.isEmpty()){
+            File file = new File(filePath);
+            if (file.exists()){
+                getMLResponse(file.getName());
+            }
+        }
+    }
 
 
     //5. getMLResponse() method--> After Uploading it ML Model will give the response of the Image file and display on View through API call
@@ -348,7 +399,6 @@ public class FileUploadScreen extends AppCompatActivity {
             }
         });
     }
-
     private void showRunOutput(JSONObject data) {
         try {
             String responseBody = data.getJSONObject("message").getString("body");
@@ -374,8 +424,6 @@ public class FileUploadScreen extends AppCompatActivity {
             });
         }
     }
-
-
     interface OnPathRetrievedListener{
         void OnPathRetrivedListener(String filepath);
     }
