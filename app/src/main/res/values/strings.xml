@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">HomeScreen</string>
+    <string name="app_name">CIQ Droid</string>
 
     <string name="terms_and_conditions_label" >
         1. Introduction CIQ Web offers pre-trained computer vision (CV) capabilities to extract information and insights from images. This Feature utilizes machine learning and AI algorithms to analyze images uploaded by users. By using the image recognition feature ("Feature") provided by NineBit Computing Pvt. Ltd., you agree to abide by these Terms and Conditions.\n \n

@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:padding="16dp"
     android:background="@color/lightBlue"
     tools:context=".FileUploadScreen">
@@ -31,15 +32,36 @@
                 android:gravity="center"
                 android:orientation="vertical">
 
-                <TextView
-                    android:id="@+id/upload_title"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:padding="16dp"
-                    android:text="@string/UploadFile_label"
-                    android:textSize="24sp"
-                    android:textStyle="bold" />
+                <RelativeLayout
+                    android:layout_width="320dp"
+                    android:layout_height="69dp"
+                    android:background="#FFFFFF"
+                    android:padding="16dp">
+
+                    <ImageView
+                        android:id="@+id/back_button_Upload_Files"
+                        android:layout_width="57dp"
+                        android:layout_height="35dp"
+                        android:layout_alignParentStart="true"
+                        android:layout_centerVertical="true"
+                        android:layout_marginEnd="-16dp"
+                        android:layout_toStartOf="@+id/uploadFileSection_title"
+                        android:background="#FFFFFF"
+                        android:src="@drawable/ic_launcher_foreground" />
+
+                    <TextView
+                        android:id="@+id/uploadFileSection_title"
+                        android:layout_width="184dp"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:layout_marginStart="27dp"
+                        android:layout_marginEnd="52dp"
+                        android:paddingLeft="8dp"
+                        android:text="@string/UploadFile_label"
+                        android:textAlignment="center"
+                        android:textColor="@color/black"
+                        android:textSize="28sp" />
+                </RelativeLayout>
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -103,11 +125,13 @@
                     android:padding="16dp">
 
                     <ImageView
-                        android:id="@+id/back_button"
-                        android:layout_width="57dp"
-                        android:layout_height="35dp"
+                        android:id="@+id/back_button_preview_section"
+                        android:layout_width="70dp"
+                        android:layout_height="39dp"
                         android:layout_alignParentStart="true"
                         android:layout_centerVertical="true"
+                        android:layout_marginEnd="-2dp"
+                        android:layout_toStartOf="@id/preview_title"
                         android:background="#FFFFFF"
                         android:src="@drawable/ic_launcher_foreground" />
                     <TextView
@@ -117,7 +141,6 @@
                         android:layout_alignParentEnd="true"
                         android:layout_marginStart="27dp"
                         android:layout_marginEnd="92dp"
-                        android:layout_toEndOf="@id/back_button"
                         android:paddingLeft="8dp"
                         android:text="@string/preview_text_label"
                         android:textAlignment="center"
@@ -139,45 +162,44 @@
                         android:layout_marginTop="16dp"
                         android:scaleType="fitCenter" />
                 </LinearLayout>
-                <Button
-                    android:id="@+id/fileUploadBtn"
-                    android:layout_width="338dp"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_marginTop="16dp"
-                    android:text="@string/previewUpload_button_label"/>
 
-<!--                <com.google.android.material.progressindicator.CircularProgressIndicator-->
-<!--                    android:id="@+id/uploadProgressBar"-->
-<!--                    android:layout_width="wrap_content"-->
-<!--                    android:layout_height="wrap_content"-->
-<!--                    android:layout_gravity="center_horizontal"-->
-<!--                    android:visibility="gone" />-->
+                <FrameLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content">
+                    <Button
+                        android:id="@+id/fileUploadBtn"
+                        android:layout_width="338dp"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginTop="16dp"
+                        android:text="@string/previewUpload_button_label"/>
+                    <com.google.android.material.progressindicator.CircularProgressIndicator
+                        android:id="@+id/uploadProgressBar"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:visibility="gone"
+                        app:showDelay="@integer/material_motion_duration_long_1"
+                        android:layout_gravity="center"/>
+                </FrameLayout>
 
-                <Button
-                    android:id="@+id/runModelBtn"
-                    android:layout_width="338dp"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_marginTop="16dp"
-                    android:visibility="visible"
-                    android:text="Run Model"/>
-
-<!--                <com.google.android.material.progressindicator.CircularProgressIndicator-->
-<!--                    android:id="@+id/uploadProgressBar2"-->
-<!--                    android:layout_width="wrap_content"-->
-<!--                    android:layout_height="wrap_content"-->
-<!--                    android:layout_gravity="center_horizontal"-->
-<!--                    android:visibility="gone" />-->
-
-                <Button
-                    android:id="@+id/cancelBtn"
-                    android:layout_width="340dp"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_marginTop="16dp"
-                    android:text="@string/previewCancel_button_label" />
-
+                <FrameLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content">
+                    <Button
+                        android:id="@+id/runModelBtn"
+                        android:layout_width="338dp"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginTop="16dp"
+                        android:text="Run Model"/>
+                    <com.google.android.material.progressindicator.CircularProgressIndicator
+                        android:id="@+id/uploadProgressBar2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:visibility="gone"
+                        app:showDelay="@integer/material_motion_duration_long_1"
+                        android:layout_gravity="center"/>
+                </FrameLayout>
                 <TextView
                     android:id="@+id/ml_response_text"
                     android:layout_width="wrap_content"

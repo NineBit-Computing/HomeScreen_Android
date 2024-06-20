@@ -1,7 +1,6 @@
 package com.example.homescreen;
 
 import android.annotation.SuppressLint;
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -18,6 +17,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import com.google.android.material.progressindicator.CircularProgressIndicator;
 import org.json.JSONException;
 import org.json.JSONObject;
 import java.io.File;
@@ -35,8 +35,8 @@ import okhttp3.logging.HttpLoggingInterceptor;
 
 public class FileUploadScreen extends AppCompatActivity {
     private static final int FILE_SELECT_CODE = 0;
-//    private static final long MIN_IMAGE_SIZE_BYTES = 40 * 1024;      //128 KB in bytes
-//    private static final long MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; //5 MB in bytes
+    private static final long MIN_IMAGE_SIZE_BYTES = 128 * 1024;      //128 KB in bytes
+    private static final long MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; //5 MB in bytes
 
     //Existing Variables
     private LinearLayout uploadFileSection;
@@ -44,12 +44,14 @@ public class FileUploadScreen extends AppCompatActivity {
     private Uri fileUri;
     private String filePath;
     private TextView ml_response_text;
-    private ImageView backButton;
+    private ImageView backButton_preview_label;
+    private ImageView backButton_uploadfiles_label;
     private ImageView previewImage;
     private Button uploadButton;
     private Button RunModelBtn;
     private Button chooseFileButton;
-    private Button cancelButton;
+    private CircularProgressIndicator uploadProgressBar;
+    private CircularProgressIndicator modelRunProgressBar;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
        // Log.e( "onCreate: ", "onCreate of file upload screen" );
@@ -60,28 +62,31 @@ public class FileUploadScreen extends AppCompatActivity {
     }
 
     private void initViews() {
-        uploadFileSection = findViewById(R.id.uploadFileSection);
-        previewSection = findViewById(R.id.previewSection);
-        previewImage = findViewById(R.id.previewImage);
-        ml_response_text = findViewById(R.id.ml_response_text);
-        backButton = findViewById(R.id.back_button);
-        RunModelBtn = findViewById(R.id.runModelBtn);
-        uploadButton = findViewById(R.id.fileUploadBtn);
-        chooseFileButton = findViewById(R.id.outlinedButton);
-        cancelButton = findViewById(R.id.cancelBtn);
+        uploadFileSection = findViewById(R.id.uploadFileSection);   //Initialize uploadFileSection
+        previewSection = findViewById(R.id.previewSection);         //Initialize previewSection
+        previewImage = findViewById(R.id.previewImage);             //Initialize previewImage
+        ml_response_text = findViewById(R.id.ml_response_text);     //Initialize ml_response_text
+        backButton_preview_label = findViewById(R.id.back_button_preview_section); //Initialize backButton of Preview Section
+        backButton_uploadfiles_label = findViewById(R.id.back_button_Upload_Files); //Initialize backButton of UploadFiles Section
+        RunModelBtn = findViewById(R.id.runModelBtn);               //Initialize RunModelBtn
+        uploadButton = findViewById(R.id.fileUploadBtn);            //Initialize uploadButton
+        chooseFileButton = findViewById(R.id.outlinedButton);       //Initialize chooseFileButton
+        uploadProgressBar = findViewById(R.id.uploadProgressBar);    // Initialize upload CircularProgressIndicator
+        modelRunProgressBar = findViewById(R.id.uploadProgressBar2); // Initialize model run CircularProgressIndicator
     }
     private void setButtonListeners() {
         // Set click listener for choose file button
         chooseFileButton.setOnClickListener(v -> showFileChooser());
         // Set click listener for upload button
         uploadButton.setOnClickListener(v -> startUpload());
-        // Set click listener for cancel button
-        cancelButton.setOnClickListener(v -> showCancelConfirmationDialog());
-        // Set click listener for back button
-        backButton.setOnClickListener(v -> navigateBackToFileSelection());
+        // Set click listener for back button of Preview Section
+        backButton_preview_label.setOnClickListener(v -> navigateBackToFileSelection());
+        // Set click listener for back button of UploadFiles Section
+        backButton_uploadfiles_label.setOnClickListener(v -> navigateBackToDashboard());
         // Set click listener for run model button
         RunModelBtn.setOnClickListener(v -> runModel());
     }
+
 
     //Method to Select the image file to be uploaded(in jpeg or in png)
     private void showFileChooser() {
@@ -97,12 +102,12 @@ public class FileUploadScreen extends AppCompatActivity {
         if (requestCode == FILE_SELECT_CODE && resultCode == RESULT_OK && data != null) {
             fileUri = data.getData();
             if (fileUri != null) {
-               // Checking image size before previewing
-//                if (validateImageSize(fileUri)){
+                //Checking image size before previewing
+                if (validateImageSize(fileUri)){
                     handleFilePreview(fileUri);
-////          }else {
-//                    Toast.makeText(this, "Please select an image between 128 KB and 5 MB in size.", Toast.LENGTH_LONG).show();
-//                }
+        }else {
+                    Toast.makeText(this, "Please select an image between 128 KB and 5 MB in size.", Toast.LENGTH_LONG).show();
+                }
             } else {
                 Log.e("FileUpload", "File URI is null");
 
@@ -115,19 +120,19 @@ public class FileUploadScreen extends AppCompatActivity {
 
 
 //    Method to validate selected image size between 128 KB and 5 MB
-//    private boolean validateImageSize(Uri uri){
-//        try (InputStream inputStream = getContentResolver().openInputStream(uri)){
-//            if (inputStream!=null){
-//                long filesize = inputStream.available();
-//                return filesize >=MIN_IMAGE_SIZE_BYTES && filesize<=MAX_IMAGE_SIZE_BYTES;
-//            } else {
-//                Log.e( "FileUpload", "Input stream is null" );
-//            }
-//        } catch (Exception e){
-//            Log.e( "FileUpload", "Error validating image size", e );
-//        }
-//        return false;
-//    }
+    private boolean validateImageSize(Uri uri){
+        try (InputStream inputStream = getContentResolver().openInputStream(uri)){
+            if (inputStream!=null){
+                long filesize = inputStream.available();
+                return filesize >=MIN_IMAGE_SIZE_BYTES && filesize<=MAX_IMAGE_SIZE_BYTES;
+            } else {
+                Log.e( "FileUpload", "Input stream is null" );
+            }
+        } catch (Exception e){
+            Log.e( "FileUpload", "Error validating image size", e );
+        }
+        return false;
+    }
 
     //Method to Preview The selected image file , opens an input stream to read the selected file , decodes it into bitmap and displays in image view
     @SuppressLint("SetTextI18n")
@@ -151,7 +156,6 @@ public class FileUploadScreen extends AppCompatActivity {
         }
     }
 
-
     // Method to navigate back to file selection
     private void navigateBackToFileSelection() {
         previewSection.setVisibility(View.GONE);
@@ -162,23 +166,18 @@ public class FileUploadScreen extends AppCompatActivity {
         RunModelBtn.setVisibility(View.GONE);
     }
 
-    // Method to show cancel confirmation dialog
-    private void showCancelConfirmationDialog() {
-        new AlertDialog.Builder(this)
-                .setMessage(R.string.dialog_box_label)
-                .setPositiveButton("Yes", (dialog, which) -> cancelUpload())
-                .setNegativeButton("No", null)
-                .show();
+    // Method to navigate back to Dashboard
+    private
+    void navigateBackToDashboard() {
+        Intent intent = new Intent(FileUploadScreen.this, MainActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+        finish();
     }
 
-    // Method to cancel upload and navigate back to file selection
-    private void cancelUpload() {
-        previewSection.setVisibility(View.GONE);
-        uploadFileSection.setVisibility(View.VISIBLE);
-        ml_response_text.setText("");
-        uploadButton.setVisibility(View.GONE);
-        ml_response_text.setVisibility(View.GONE);
-        RunModelBtn.setVisibility(View.GONE);
+    //Method for Circular Progress Bar Indicator Visibility
+    private void showProgress(CircularProgressIndicator progressBar, boolean show) {
+        runOnUiThread(() -> progressBar.setVisibility(show ? View.VISIBLE : View.GONE));
     }
 
 
@@ -189,7 +188,7 @@ public class FileUploadScreen extends AppCompatActivity {
         } else {
             Log.e("FileUpload", "No file selected");
         }
-//        RunModelBtn.setVisibility(View.GONE);
+        showProgress(uploadProgressBar, true);
     }
 
 
@@ -266,6 +265,7 @@ public class FileUploadScreen extends AppCompatActivity {
                     @Override
                     public void onFailure(okhttp3.Call call, IOException e) {
                         Log.e("GenerateSignedUrl", "ERROR: Failed to make request", e);
+                        runOnUiThread(()->showProgress(uploadProgressBar, false));
                         System.out.println("Error while getting signed url: " + e.getMessage());
                     }
 
@@ -281,10 +281,12 @@ public class FileUploadScreen extends AppCompatActivity {
                                 uploadToS3(message); // Only pass the signed URL
                             } catch (JSONException e) {
                                 Log.e("GenerateSignedUrl", "ERROR: Failed to parse JSON response", e);
+                                runOnUiThread(() -> showProgress(uploadProgressBar, false));
                             }
                         } else {
                             String responseBody = response.body().string();
                             Log.e("GenerateSignedUrl", "ERROR: " + response.code() + " " + response.message() + " " + responseBody);
+                            runOnUiThread(() -> showProgress(uploadProgressBar, false));
                         }
                     }
                 });
@@ -302,6 +304,7 @@ public class FileUploadScreen extends AppCompatActivity {
         File file = new File(filePath);
         if (!file.exists()) {
             Log.e("Upload", "File does not exist");
+            runOnUiThread(() -> showProgress(uploadProgressBar, false));
             return;
         }
         OkHttpClient client = new OkHttpClient();
@@ -318,6 +321,7 @@ public class FileUploadScreen extends AppCompatActivity {
             @Override
             public void onFailure(okhttp3.Call call, IOException e) {
                 Log.e("Upload", "Error Occurred While Uploading", e);
+                runOnUiThread(() -> showProgress(uploadProgressBar, false));
             }
 
             @SuppressLint("SetTextI18n")
@@ -329,10 +333,11 @@ public class FileUploadScreen extends AppCompatActivity {
                         ml_response_text.setVisibility(View.GONE);
                         RunModelBtn.setVisibility(View.VISIBLE);
                         uploadButton.setVisibility(View.GONE);
-//                        getMLResponse(file.getName());
+                        showProgress(uploadProgressBar, false);
                     });
                 } else {
                     Log.e("Upload", "ERROR: " + response.message());
+                    runOnUiThread(() -> showProgress(uploadProgressBar, false));
                 }
             }
         });
@@ -343,6 +348,7 @@ public class FileUploadScreen extends AppCompatActivity {
         if(filePath!= null && !filePath.isEmpty()){
             File file = new File(filePath);
             if (file.exists()){
+                runOnUiThread(() -> showProgress(modelRunProgressBar, true));
                 getMLResponse(file.getName());
             }
         }
@@ -372,6 +378,7 @@ public class FileUploadScreen extends AppCompatActivity {
                 runOnUiThread(() -> {
                     ml_response_text.setText("Failed to fetch ML response");
                     ml_response_text.setVisibility(View.VISIBLE);
+                    runOnUiThread(() -> showProgress(modelRunProgressBar, false));
                 });
             }
 
@@ -385,6 +392,7 @@ public class FileUploadScreen extends AppCompatActivity {
                     } catch (JSONException e) {
                         Log.e("ML Response", "Failed to parse JSON response", e);
                         runOnUiThread(() -> {
+                            runOnUiThread(() -> showProgress(modelRunProgressBar, false));
                             ml_response_text.setText("Failed to parse ML response");
                             ml_response_text.setVisibility(View.VISIBLE);
                         });
@@ -393,6 +401,7 @@ public class FileUploadScreen extends AppCompatActivity {
                     Log.e("ML Response", "ERROR: " + response.code() + " " + response.message());
                     runOnUiThread(() -> {
                         ml_response_text.setText("Failed to get ML response: " + response.code());
+                        runOnUiThread(() -> showProgress(modelRunProgressBar, false));
                         ml_response_text.setVisibility(View.VISIBLE);
                     });
                 }
@@ -404,7 +413,7 @@ public class FileUploadScreen extends AppCompatActivity {
             String responseBody = data.getJSONObject("message").getString("body");
             String statusCode = data.getJSONObject("message").getString("statusCode");
             String outputString;
-
+            runOnUiThread(() -> showProgress(modelRunProgressBar, false));
             if (!statusCode.equals("SUCCESS")) {
                 outputString = "Error: " + statusCode;
             } else {
@@ -421,6 +430,7 @@ public class FileUploadScreen extends AppCompatActivity {
             runOnUiThread(() -> {
                 ml_response_text.setText("Failed to parse JSON response");
                 ml_response_text.setVisibility(View.VISIBLE);
+                runOnUiThread(() -> showProgress(modelRunProgressBar, false));
             });
         }
     }
