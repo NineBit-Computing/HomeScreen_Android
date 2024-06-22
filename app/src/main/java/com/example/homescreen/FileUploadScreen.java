@@ -3,6 +3,7 @@ package com.example.homescreen;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -25,6 +26,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.concurrent.TimeUnit;
+
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
@@ -37,6 +40,9 @@ public class FileUploadScreen extends AppCompatActivity {
     private static final int FILE_SELECT_CODE = 0;
     private static final long MIN_IMAGE_SIZE_BYTES = 128 * 1024;      //128 KB in bytes
     private static final long MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; //5 MB in bytes
+    public static final String UPLOADED_FILE_COUNT_KEY = "uploadedFileCount";
+    public static final int MAX_UPLOAD_LIMIT = 5;
+    public static final String PREFS_NAME = "TermsPrefs";
 
     //Existing Variables
     private LinearLayout uploadFileSection;
@@ -58,6 +64,7 @@ public class FileUploadScreen extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.file_upload_screen);
         initViews();
+        resetUploadCount();
         setButtonListeners();
     }
 
@@ -103,11 +110,11 @@ public class FileUploadScreen extends AppCompatActivity {
             fileUri = data.getData();
             if (fileUri != null) {
                 //Checking image size before previewing
-                if (validateImageSize(fileUri)){
-                    handleFilePreview(fileUri);
-        }else {
-                    Toast.makeText(this, "Please select an image between 128 KB and 5 MB in size.", Toast.LENGTH_LONG).show();
-                }
+//                if (validateImageSize(fileUri)){
+                   handleFilePreview(fileUri);
+//        }else {
+//                    Toast.makeText(this, "Please select an image between 128 KB and 5 MB in size.", Toast.LENGTH_LONG).show();
+//                }
             } else {
                 Log.e("FileUpload", "File URI is null");
 
@@ -120,19 +127,19 @@ public class FileUploadScreen extends AppCompatActivity {
 
 
 //    Method to validate selected image size between 128 KB and 5 MB
-    private boolean validateImageSize(Uri uri){
-        try (InputStream inputStream = getContentResolver().openInputStream(uri)){
-            if (inputStream!=null){
-                long filesize = inputStream.available();
-                return filesize >=MIN_IMAGE_SIZE_BYTES && filesize<=MAX_IMAGE_SIZE_BYTES;
-            } else {
-                Log.e( "FileUpload", "Input stream is null" );
-            }
-        } catch (Exception e){
-            Log.e( "FileUpload", "Error validating image size", e );
-        }
-        return false;
-    }
+//    private boolean validateImageSize(Uri uri){
+//        try (InputStream inputStream = getContentResolver().openInputStream(uri)){
+//            if (inputStream!=null){
+//                long filesize = inputStream.available();
+//                return filesize >=MIN_IMAGE_SIZE_BYTES && filesize<=MAX_IMAGE_SIZE_BYTES;
+//            } else {
+//                Log.e( "FileUpload", "Input stream is null" );
+//            }
+//        } catch (Exception e){
+//            Log.e( "FileUpload", "Error validating image size", e );
+//        }
+//        return false;
+//    }
 
     //Method to Preview The selected image file , opens an input stream to read the selected file , decodes it into bitmap and displays in image view
     @SuppressLint("SetTextI18n")
@@ -184,6 +191,11 @@ public class FileUploadScreen extends AppCompatActivity {
     // 1. startUpload() method -> Uploading the image file (Which includes 2 Methods-> Getting the image file Path and using that image file path to Generate Signed URL)
     private void startUpload() {
         if (fileUri != null) {
+            if (!checkUploadLimit()){
+                Toast.makeText(this, "Maximum upload limit reached", Toast.LENGTH_SHORT).show();
+                finish();
+                return;
+            }
              getPathFromUri(this, fileUri, this::generateSignedUrl);
         } else {
             Log.e("FileUpload", "No file selected");
@@ -312,7 +324,7 @@ public class FileUploadScreen extends AppCompatActivity {
         RequestBody requestBody = RequestBody.create(file, MediaType.parse(mediaType));
         Request request = new Request.Builder()
                 .url(signedUrl)
-                .put(requestBody)
+                .put(requestBody)  //put
                 .addHeader("Content-Type", mediaType)
                 .build();
 
@@ -329,6 +341,7 @@ public class FileUploadScreen extends AppCompatActivity {
             public void onResponse(okhttp3.Call call, Response response) throws IOException {
                 if (response.isSuccessful()) {
                     Log.i("Upload", "Successfully Uploaded");
+                    updateUploadCount();
                     runOnUiThread(()->{
                         ml_response_text.setVisibility(View.GONE);
                         RunModelBtn.setVisibility(View.VISIBLE);
@@ -389,6 +402,7 @@ public class FileUploadScreen extends AppCompatActivity {
                     try {
                         JSONObject jsonResponse = new JSONObject(responseBody);
                         runOnUiThread(() -> showRunOutput(jsonResponse));
+                        System.out.println("ML Response" + responseBody);
                     } catch (JSONException e) {
                         Log.e("ML Response", "Failed to parse JSON response", e);
                         runOnUiThread(() -> {
@@ -437,4 +451,28 @@ public class FileUploadScreen extends AppCompatActivity {
     interface OnPathRetrievedListener{
         void OnPathRetrivedListener(String filepath);
     }
+    // Method to update the upload count in shared preferences
+    private void updateUploadCount() {
+        SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        int uploadedFileCount = preferences.getInt(UPLOADED_FILE_COUNT_KEY, 0);
+        uploadedFileCount++;
+        Log.d("Upload_Count", "Updated upload count: " + uploadedFileCount);
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putInt(UPLOADED_FILE_COUNT_KEY, uploadedFileCount);
+        editor.apply();
+    }
+    // Method to check if the user has reached the upload limit
+    private boolean checkUploadLimit() {
+        SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        int uploadedFileCount = preferences.getInt(UPLOADED_FILE_COUNT_KEY, 0);
+        Log.d("Check_Upload_Count", "Current upload count: " + uploadedFileCount);
+        return uploadedFileCount < MAX_UPLOAD_LIMIT;
+    }
+    private void resetUploadCount(){
+        SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putInt(UPLOADED_FILE_COUNT_KEY, 0);
+        editor.apply();
+    }
+
 }
