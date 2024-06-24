@@ -40,8 +40,7 @@ public class FileUploadScreen extends AppCompatActivity {
     private static final int FILE_SELECT_CODE = 0;
     private static final long MIN_IMAGE_SIZE_BYTES = 128 * 1024;      //128 KB in bytes
     private static final long MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; //5 MB in bytes
-    public static final String UPLOADED_FILE_COUNT_KEY = "uploadedFileCount";
-    public static final int MAX_UPLOAD_LIMIT = 5;
+  //  public static final String UPLOADED_FILE_COUNT_KEY = "uploadedFileCount";
     public static final String PREFS_NAME = "TermsPrefs";
 
     //Existing Variables
@@ -64,7 +63,7 @@ public class FileUploadScreen extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.file_upload_screen);
         initViews();
-        resetUploadCount();
+       // resetUploadCount();
         setButtonListeners();
     }
 
@@ -191,11 +190,11 @@ public class FileUploadScreen extends AppCompatActivity {
     // 1. startUpload() method -> Uploading the image file (Which includes 2 Methods-> Getting the image file Path and using that image file path to Generate Signed URL)
     private void startUpload() {
         if (fileUri != null) {
-            if (!checkUploadLimit()){
-                Toast.makeText(this, "Maximum upload limit reached", Toast.LENGTH_SHORT).show();
-                finish();
-                return;
-            }
+//            if (!checkUploadLimit()){
+//                Toast.makeText(this, "Maximum upload limit reached", Toast.LENGTH_SHORT).show();
+//                finish();
+//                return;
+//            }
              getPathFromUri(this, fileUri, this::generateSignedUrl);
         } else {
             Log.e("FileUpload", "No file selected");
@@ -238,7 +237,10 @@ public class FileUploadScreen extends AppCompatActivity {
             runOnUiThread(()-> listener.OnPathRetrivedListener(finalFilePath));
         }).start();
     }
-
+    // Callback interface to handle the retrieved file path
+    interface OnPathRetrievedListener{
+        void OnPathRetrivedListener(String filepath);
+    }
     //Helper method to get the file extension from the URI
     private  String getFileExtension(Context context, Uri uri){
         String extension = null;
@@ -260,16 +262,28 @@ public class FileUploadScreen extends AppCompatActivity {
                         .build();
 
                 String fileName = file.getName();
+                Log.e( "generateSignedUrl: filename", fileName );
                 String url = "https://apis-dev.ninebit.in/presigned/putObject/" + fileName;
 
-                RequestBody requestBody = new MultipartBody.Builder()
-                        .setType(MultipartBody.FORM)
-                        .addFormDataPart("file", fileName, RequestBody.create(file, MediaType.parse("application/octet-stream")))
-                        .build();
+                JSONObject jsonObject = new JSONObject();
+                try {
+                    jsonObject.put("fileName", fileName);
+                    jsonObject.put("fileSize", file.length());
+                }  catch (JSONException e){
+                    Log.e("GenerateSignedUrl", "ERROR: Failed to create JSON body", e );
+                    return;
+                }
+
+                RequestBody requestBody = RequestBody.create(jsonObject.toString(), MediaType.parse("application/json"));
+//                RequestBody requestBody = new MultipartBody.Builder()
+//                        .setType(MultipartBody.FORM)
+//                        .addFormDataPart("file", fileName, RequestBody.create(file, MediaType.parse("application/octet-stream")))
+//                        .build();
 
                 Request request = new Request.Builder()
                         .url(url)
                         .post(requestBody)
+                        .addHeader("x-ninebit-clientid", "android_123")
                         .build();
 
                 client.newCall(request).enqueue(new okhttp3.Callback() {
@@ -298,6 +312,25 @@ public class FileUploadScreen extends AppCompatActivity {
                         } else {
                             String responseBody = response.body().string();
                             Log.e("GenerateSignedUrl", "ERROR: " + response.code() + " " + response.message() + " " + responseBody);
+                            try {
+                                JSONObject jsonObject = new JSONObject(responseBody);
+                                String message = jsonObject.getString("message");
+                                if (response.code() == 500) {
+                                    String quotaMessage = jsonObject.optString("quotaMessage", "Your file Quota has reached limit, Please contact admin @support.ninebit.in");
+                                    runOnUiThread(() -> {
+                                        Toast.makeText(FileUploadScreen.this, message + ": " + quotaMessage, Toast.LENGTH_LONG).show();
+                                        uploadProgressBar.setVisibility(View.GONE);
+                                    });
+                                } else {
+                                    runOnUiThread(() -> {
+                                        Toast.makeText(FileUploadScreen.this, message, Toast.LENGTH_LONG).show();
+                                        uploadProgressBar.setVisibility(View.GONE);
+                                    });
+                                }
+                            } catch (JSONException e) {
+                                Log.e("GenerateSignedUrl", "ERROR: Failed to parse JSON response", e);
+                                runOnUiThread(() -> showProgress(uploadProgressBar, false));
+                            }
                             runOnUiThread(() -> showProgress(uploadProgressBar, false));
                         }
                     }
@@ -341,7 +374,7 @@ public class FileUploadScreen extends AppCompatActivity {
             public void onResponse(okhttp3.Call call, Response response) throws IOException {
                 if (response.isSuccessful()) {
                     Log.i("Upload", "Successfully Uploaded");
-                    updateUploadCount();
+                   // updateUploadCount();
                     runOnUiThread(()->{
                         ml_response_text.setVisibility(View.GONE);
                         RunModelBtn.setVisibility(View.VISIBLE);
@@ -382,7 +415,8 @@ public class FileUploadScreen extends AppCompatActivity {
         RequestBody requestBody = RequestBody.create(jsonBody.toString(), MediaType.parse("application/json")); //Converts the jsonBody into a RequestBody object  for sending  an HTTP request.
         Request request = new Request.Builder()
                 .url(url)
-                .post(requestBody) //post request
+                .post(requestBody) // POST request
+                .addHeader("x-ninebit-clientid", "android_123") // Added the header here
                 .build();
         client.newCall(request).enqueue(new okhttp3.Callback() {
             @Override
@@ -412,7 +446,7 @@ public class FileUploadScreen extends AppCompatActivity {
                         });
                     }
                 } else {
-                    Log.e("ML Response", "ERROR: " + response.code() + " " + response.message());
+                    Log.e("ML Response", "ERROR: " + response.code() + " " + response.body());
                     runOnUiThread(() -> {
                         ml_response_text.setText("Failed to get ML response: " + response.code());
                         runOnUiThread(() -> showProgress(modelRunProgressBar, false));
@@ -448,31 +482,34 @@ public class FileUploadScreen extends AppCompatActivity {
             });
         }
     }
-    interface OnPathRetrievedListener{
-        void OnPathRetrivedListener(String filepath);
-    }
+
+
+
+
+
+
     // Method to update the upload count in shared preferences
-    private void updateUploadCount() {
-        SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        int uploadedFileCount = preferences.getInt(UPLOADED_FILE_COUNT_KEY, 0);
-        uploadedFileCount++;
-        Log.d("Upload_Count", "Updated upload count: " + uploadedFileCount);
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putInt(UPLOADED_FILE_COUNT_KEY, uploadedFileCount);
-        editor.apply();
-    }
-    // Method to check if the user has reached the upload limit
-    private boolean checkUploadLimit() {
-        SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        int uploadedFileCount = preferences.getInt(UPLOADED_FILE_COUNT_KEY, 0);
-        Log.d("Check_Upload_Count", "Current upload count: " + uploadedFileCount);
-        return uploadedFileCount < MAX_UPLOAD_LIMIT;
-    }
-    private void resetUploadCount(){
-        SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putInt(UPLOADED_FILE_COUNT_KEY, 0);
-        editor.apply();
-    }
+//    private void updateUploadCount() {
+//        SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+//        int uploadedFileCount = preferences.getInt(UPLOADED_FILE_COUNT_KEY, 0);
+//        uploadedFileCount++;
+//        Log.d("Upload_Count", "Updated upload count: " + uploadedFileCount);
+//        SharedPreferences.Editor editor = preferences.edit();
+//        editor.putInt(UPLOADED_FILE_COUNT_KEY, uploadedFileCount);
+//        editor.apply();
+//    }
+//    // Method to check if the user has reached the upload limit
+//    private boolean checkUploadLimit() {
+//        SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+//        int uploadedFileCount = preferences.getInt(UPLOADED_FILE_COUNT_KEY, 0);
+//        Log.d("Check_Upload_Count", "Current upload count: " + uploadedFileCount);
+//        return uploadedFileCount < MAX_UPLOAD_LIMIT;
+//    }
+//    private void resetUploadCount(){
+//        SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+//        SharedPreferences.Editor editor = preferences.edit();
+//        editor.putInt(UPLOADED_FILE_COUNT_KEY, 0);
+//        editor.apply();
+//    }
 
 }

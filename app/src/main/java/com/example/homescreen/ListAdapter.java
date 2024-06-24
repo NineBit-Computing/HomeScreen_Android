@@ -41,7 +41,6 @@ public class ListAdapter extends ArrayAdapter<ListData> {
         listTime.setText(listData.getTime());
         deleteView.setImageResource(listData.getDeleteIcon());
 
-
         deleteView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
