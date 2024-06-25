@@ -1,0 +1,117 @@
+
+
+ 1. showFileChooser() - Test Case
+
+ Ensure that when `showFileChooser()` is called, the correct intent is created to pick an image file.
+
+-  Create an instance of `FileUploadScreen`.
+-  Call `showFileChooser()` method.
+- Verify that an intent is started to pick content with action `Intent.ACTION_GET_CONTENT`.
+- Verify that the intent type is set to `"image/*"`.
+- Verify that the intent specifies MIME types `"image/jpeg"` and `"image/png"`.
+
+ 2.onActivityResult() - Test Cases
+
+Validate the behavior of `onActivityResult()` when a file selection is completed or canceled.
+
+Test Case 1: File Selected Successfully
+ Create an instance of `FileUploadScreen`.
+ Simulate the result of selecting a file by calling `onActivityResult()` with a mock `Intent` containing a mock `Uri`.
+    - Ensure that `fileUri` in the activity is set to the mock `Uri`.
+    - Validate any other expected behavior in your implementation.
+
+Test Case 2: File Selection Failed or Canceled
+Create an instance of `FileUploadScreen`.
+ Simulate the result when file selection is canceled or fails by calling `onActivityResult()` with a result code indicating failure.
+    - Ensure that appropriate logging or error handling occurs.
+    - Validate any other expected behavior in your implementation.
+
+ 3.validateImageSize(Uri uri) - Test Case
+
+Test the `validateImageSize(Uri uri)` method that checks if the selected image file size is within the allowed range.
+ Create an instance of `FileUploadScreen`.
+ Call `validateImageSize(uri)` with a mock `Uri`.
+  - Provide a mock `InputStream` that simulates an image of valid size and ensure the method returns `true`.
+  - Provide a mock `InputStream` with an image size outside the allowed range and ensure the method returns `false`.
+  - Validate error handling if the input stream is null or an exception occurs.
+
+4.handleFilePreview(Uri uri) - Test Case
+ Verify the behavior of `handleFilePreview(Uri uri)` method which previews the selected image file.
+ Create an instance of `FileUploadScreen`.
+ Call `handleFilePreview(uri)` with a mock `Uri`.
+  - Assert that after calling the method, the preview section becomes visible.
+  - Verify that the preview image is set with the correct bitmap.
+  - Ensure appropriate error handling if the input stream is null or an exception occurs during preview.
+
+ 5.navigateBackToFileSelection() - Test Case
+
+ Test the navigation back to the file selection view from the preview section.
+ Create an instance of `FileUploadScreen`.
+ Call `navigateBackToFileSelection()`.
+  - Assert that the preview section is hidden.
+  - Ensure that the file upload section becomes visible.
+  - Verify that other UI elements are reset as expected.
+
+ 6.navigateBackToDashboard() - Test Case
+
+ Validate navigation back to the dashboard activity.
+
+ Create an instance of `FileUploadScreen`.
+ Call `navigateBackToDashboard()`.
+  - Assert that an intent is started to navigate back to the `MainActivity`.
+  - Ensure that the activity finishes after navigation.
+
+ 7.startUpload() - Test Case
+
+ Test the `startUpload()` method which initiates the file upload process.
+
+ Create an instance of `FileUploadScreen`.
+ Call `startUpload()` with a mock `fileUri`.
+  - Validate that the file path is retrieved correctly from the `fileUri`.
+  - Ensure that progress indicators are shown during the upload process.
+
+8.GetPathFromUri(Context context, Uri uri, OnPathRetrievedListener listener) - Test Case
+
+Validate the method `getPathFromUri()` which retrieves the file path from the given URI.
+
+Create an instance of `FileUploadScreen`.
+ Call `getPathFromUri(context, uri, listener)` with a mock `Uri`.
+  - Ensure that the file path is retrieved correctly.
+  - Validate that the listener receives the correct file path.
+
+9.GenerateSignedUrl(String filePath) - Test Case
+
+ Test the method `generateSignedUrl()` which generates a signed URL for uploading the file.
+
+ Create an instance of `FileUploadScreen`.
+Call `generateSignedUrl(filePath)` with a mock file path.
+  - Validate that a valid signed URL is generated.
+  - Ensure correct handling of responses and errors from the server.
+
+10.uploadToS3(String signedUrl) - Test Case
+
+Test the method `uploadToS3()` which uploads the file to S3 using the signed URL.
+
+Create an instance of `FileUploadScreen` with a mock signed URL and file path.
+Call `uploadToS3(signedUrl)`.
+  - Ensure that the file upload process completes successfully.
+  - Validate handling of success and failure scenarios.
+
+11.runModel() - Test Case
+
+Validate the method `runModel()` which initiates the ML model execution.
+
+Create an instance of `FileUploadScreen` with a mock file path.
+Call `runModel()`.
+  - Ensure that the ML model execution process starts.
+  - Validate handling of responses and errors from the ML model.
+
+12.getMLResponse(String fileName) - Test Case
+
+ Test the method `getMLResponse()` which retrieves ML model responses for the uploaded file.
+
+Create an instance of `FileUploadScreen` with a mock file name.
+Call `getMLResponse(fileName)`.
+  - Ensure that the ML response is fetched correctly.
+  - Validate handling of responses and errors from the ML model.
+

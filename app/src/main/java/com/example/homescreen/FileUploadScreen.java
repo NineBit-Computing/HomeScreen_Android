@@ -38,25 +38,25 @@ import okhttp3.logging.HttpLoggingInterceptor;
 
 public class FileUploadScreen extends AppCompatActivity {
     private static final int FILE_SELECT_CODE = 0;
-    private static final long MIN_IMAGE_SIZE_BYTES = 128 * 1024;      //128 KB in bytes
-    private static final long MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; //5 MB in bytes
+//    private static final long MIN_IMAGE_SIZE_BYTES = 128 * 1024;      //128 KB in bytes
+//    private static final long MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; //5 MB in bytes
   //  public static final String UPLOADED_FILE_COUNT_KEY = "uploadedFileCount";
     public static final String PREFS_NAME = "TermsPrefs";
 
     //Existing Variables
-    private LinearLayout uploadFileSection;
-    private LinearLayout previewSection;
+    LinearLayout uploadFileSection;
+    LinearLayout previewSection;
     private Uri fileUri;
     private String filePath;
-    private TextView ml_response_text;
-    private ImageView backButton_preview_label;
-    private ImageView backButton_uploadfiles_label;
-    private ImageView previewImage;
-    private Button uploadButton;
-    private Button RunModelBtn;
-    private Button chooseFileButton;
-    private CircularProgressIndicator uploadProgressBar;
-    private CircularProgressIndicator modelRunProgressBar;
+    TextView ml_response_text;
+    ImageView backButton_preview_label;
+    ImageView backButton_uploadfiles_label;
+    ImageView previewImage;
+    Button uploadButton;
+    Button RunModelBtn;
+    Button chooseFileButton;
+    CircularProgressIndicator uploadProgressBar;
+    CircularProgressIndicator modelRunProgressBar;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
        // Log.e( "onCreate: ", "onCreate of file upload screen" );
@@ -109,7 +109,7 @@ public class FileUploadScreen extends AppCompatActivity {
             fileUri = data.getData();
             if (fileUri != null) {
                 //Checking image size before previewing
-//                if (validateImageSize(fileUri)){
+          //    if (validateImageSize(fileUri)){
                    handleFilePreview(fileUri);
 //        }else {
 //                    Toast.makeText(this, "Please select an image between 128 KB and 5 MB in size.", Toast.LENGTH_LONG).show();
@@ -125,8 +125,8 @@ public class FileUploadScreen extends AppCompatActivity {
     }
 
 
-//    Method to validate selected image size between 128 KB and 5 MB
-//    private boolean validateImageSize(Uri uri){
+   // Method to validate selected image size between 128 KB and 5 MB
+//   boolean validateImageSize(Uri uri){
 //        try (InputStream inputStream = getContentResolver().openInputStream(uri)){
 //            if (inputStream!=null){
 //                long filesize = inputStream.available();
@@ -142,7 +142,7 @@ public class FileUploadScreen extends AppCompatActivity {
 
     //Method to Preview The selected image file , opens an input stream to read the selected file , decodes it into bitmap and displays in image view
     @SuppressLint("SetTextI18n")
-    private void handleFilePreview(Uri uri) {
+    void handleFilePreview(Uri uri) {
         uploadButton.setVisibility(View.VISIBLE);
         RunModelBtn.setVisibility(View.GONE);
         try (InputStream inputStream = getContentResolver().openInputStream(uri)) {
@@ -163,7 +163,7 @@ public class FileUploadScreen extends AppCompatActivity {
     }
 
     // Method to navigate back to file selection
-    private void navigateBackToFileSelection() {
+    void navigateBackToFileSelection() {
         previewSection.setVisibility(View.GONE);
         uploadButton.setVisibility(View.GONE);
         uploadFileSection.setVisibility(View.VISIBLE);
@@ -205,7 +205,7 @@ public class FileUploadScreen extends AppCompatActivity {
 
     //2. getPathFromUri() method --> Getting the path of the Image File
     @SuppressLint("SetTextI18n")
-    private void getPathFromUri(Context context, Uri uri, OnPathRetrievedListener listener) {
+    void getPathFromUri(Context context, Uri uri, OnPathRetrievedListener listener) {
         new Thread(() -> {
             String filePath = null;
             try (InputStream inputStream = context.getContentResolver().openInputStream(uri)) {
@@ -237,6 +237,7 @@ public class FileUploadScreen extends AppCompatActivity {
             runOnUiThread(()-> listener.OnPathRetrivedListener(finalFilePath));
         }).start();
     }
+
     // Callback interface to handle the retrieved file path
     interface OnPathRetrievedListener{
         void OnPathRetrivedListener(String filepath);
@@ -283,7 +284,7 @@ public class FileUploadScreen extends AppCompatActivity {
                 Request request = new Request.Builder()
                         .url(url)
                         .post(requestBody)
-                        .addHeader("x-ninebit-clientid", "android_123")
+                        .addHeader("x-ninebit-clientid", "android_009")
                         .build();
 
                 client.newCall(request).enqueue(new okhttp3.Callback() {
@@ -412,11 +413,11 @@ public class FileUploadScreen extends AppCompatActivity {
         } catch (JSONException e) {
             e.printStackTrace();
         }
-        RequestBody requestBody = RequestBody.create(jsonBody.toString(), MediaType.parse("application/json")); //Converts the jsonBody into a RequestBody object  for sending  an HTTP request.
+        RequestBody requestBody = RequestBody.create(jsonBody.toString(), MediaType.parse("application/json")); //Converts the jsonBody into a RequestBody object for sending an HTTP request.
         Request request = new Request.Builder()
                 .url(url)
                 .post(requestBody) // POST request
-                .addHeader("x-ninebit-clientid", "android_123") // Added the header here
+                .addHeader("x-ninebit-clientid", "android_009") // Added the header here
                 .build();
         client.newCall(request).enqueue(new okhttp3.Callback() {
             @Override
@@ -436,7 +437,8 @@ public class FileUploadScreen extends AppCompatActivity {
                     try {
                         JSONObject jsonResponse = new JSONObject(responseBody);
                         runOnUiThread(() -> showRunOutput(jsonResponse));
-                        System.out.println("ML Response" + responseBody);
+                        System.out.println("ML Response: " + responseBody);
+
                     } catch (JSONException e) {
                         Log.e("ML Response", "Failed to parse JSON response", e);
                         runOnUiThread(() -> {
@@ -446,16 +448,32 @@ public class FileUploadScreen extends AppCompatActivity {
                         });
                     }
                 } else {
-                    Log.e("ML Response", "ERROR: " + response.code() + " " + response.body());
-                    runOnUiThread(() -> {
-                        ml_response_text.setText("Failed to get ML response: " + response.code());
+                    String responseBody = response.body().string();
+                    Log.e("ML Response", "ERROR: " + response.code() + " " + response.message() + " " + responseBody);
+                    try {
+                        JSONObject jsonObject = new JSONObject(responseBody);
+                        String message = jsonObject.getString("message");
+                        if (response.code() == 500) {
+                            String quotaMessage = jsonObject.optString("quotaMessage", "Your Run Model Quota has reached limit, Please contact admin @support.ninebit.in");
+                            runOnUiThread(() -> {
+                                Toast.makeText(FileUploadScreen.this, message + ": " + quotaMessage, Toast.LENGTH_LONG).show();
+                                modelRunProgressBar.setVisibility(View.GONE);
+                            });
+                        } else {
+                            runOnUiThread(() -> {
+                                Toast.makeText(FileUploadScreen.this, message, Toast.LENGTH_LONG).show();
+                                modelRunProgressBar.setVisibility(View.GONE);
+                            });
+                        }
+                    } catch (JSONException e) {
+                        Log.e("ML Response", "ERROR: Failed to parse JSON response", e);
                         runOnUiThread(() -> showProgress(modelRunProgressBar, false));
-                        ml_response_text.setVisibility(View.VISIBLE);
-                    });
+                    }
                 }
             }
         });
     }
+
     private void showRunOutput(JSONObject data) {
         try {
             String responseBody = data.getJSONObject("message").getString("body");
@@ -488,7 +506,19 @@ public class FileUploadScreen extends AppCompatActivity {
 
 
 
-    // Method to update the upload count in shared preferences
+
+
+
+
+
+
+
+
+
+
+
+
+    // HARDCODED Method to update the upload count in shared preferences
 //    private void updateUploadCount() {
 //        SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
 //        int uploadedFileCount = preferences.getInt(UPLOADED_FILE_COUNT_KEY, 0);

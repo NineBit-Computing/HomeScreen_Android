@@ -4,7 +4,7 @@
     <selectionStates>
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2024-06-20T11:58:07.099352875Z">
+        <DropdownSelection timestamp="2024-06-25T11:57:14.821204843Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="LocalEmulator" identifier="path=/home/tanishq/.android/avd/Pixel_6_Pro_API_28.avd" />
@@ -13,10 +13,16 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="MainActivity">
+      <SelectionState runConfigName="testFileSelectionAndPreview()">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="FileUploadScreen">
+      <SelectionState runConfigName="testUploadFile()">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="testRunModel()">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="upload_icon_check()">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
     </selectionStates>
